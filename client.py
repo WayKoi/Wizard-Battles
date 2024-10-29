@@ -1,4 +1,5 @@
 import socket
+import select
 from threading import Thread
 
 HEADER = 64
@@ -71,7 +72,10 @@ class Client:
     
     def __recieveLoop(self):
         while self.connected:
-            self.receive()
+            read, write, err = select.select([self.client], [], [], 1)
+            
+            if len(read) > 0:
+                self.receive()
     
     def connect(self):
         self.client.connect(ADDR)
@@ -83,6 +87,8 @@ class Client:
 if __name__ == '__main__':
     client = Client()
     client.connect()
+    
+    input()
     
     client.send('Hello, World!')
     client.disconnect()

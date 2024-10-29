@@ -61,7 +61,7 @@ def start():
 def connectLoop():
     while not shutdown:
         try:
-            read, write, err = select.select(full, [], [], 3)
+            read, write, err = select.select(full, [], [], 1)
             
             for s in read:
                 if s is server:
@@ -76,7 +76,7 @@ def connect():
     
     full.append(conn)
     clients[conn] = {
-        'address': addr 
+        'address': addr
     }
     
     print(f'[NEW CONNECTION] {addr} connected')
