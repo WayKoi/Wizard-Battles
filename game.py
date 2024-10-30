@@ -1,8 +1,34 @@
 from client import Client
+import json
 
 class Game(Client):
-    def process(message):
-        print(message)
-    
+    def process(self, message):
+        data = json.loads(message)
+
+        print()
+        for message in data['messages']:
+            print(message)
+
+        if not ('input' in data):
+            return
+
+        if data['input'] == 'string':
+            string = input('> ')
+            self.send(string)
+        elif data['input'] == 'choice':
+            valid = False
+
+            while not valid:
+                string = input('> ')
+                
+                for choice in data['choices']:
+                    if choice == string:
+                        self.send(string)
+                        valid = True
+                
+                if not valid:
+                    print('That is not a valid option')
+
 game = Game()
 game.connect()
+game.send('ready')

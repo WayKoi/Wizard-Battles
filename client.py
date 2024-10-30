@@ -4,7 +4,7 @@ from threading import Thread
 
 HEADER = 64
 PORT = 5050
-SERVER = '192.168.2.200'
+SERVER = socket.gethostbyname(socket.gethostname())
 FORMAT = 'utf-8'
 
 LOCAL_IP = socket.gethostbyname(socket.gethostname())
