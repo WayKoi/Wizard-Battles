@@ -1,5 +1,8 @@
 from client import Client
 import json
+import os
+
+clear = 'cls' if os.name == 'nt' else 'clear'
 
 class Game(Client):
     def process(self, message):
@@ -7,7 +10,10 @@ class Game(Client):
 
         print()
         for message in data['messages']:
-            print(message)
+            if message == '!CLEAR':
+                os.system(clear)
+            else:
+                print(message)
 
         if not ('input' in data):
             return

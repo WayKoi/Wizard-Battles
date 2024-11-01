@@ -21,6 +21,7 @@ spells = [
         'visual': RED + 'Fireball' + RESET,
         'type': DAMAGING,
         'dice': { 'base': 5, 'd4': 4 },
+        'range': 1,
         'description': 'Shoots a powerful Fireball at the opponent, dealing 9 - 21 damage',
         'crit-chance': 10,
         'cooldown': 1
@@ -30,6 +31,7 @@ spells = [
         'visual': YELLOW + 'Bolt' + RESET,
         'type': DAMAGING,
         'dice': { 'base': 2, 'd8': 3 },
+        'range': 1,
         'description': 'Shoots a bolt of lightning at the opponent, dealing 5 - 26 damage',
         'crit-chance': 20,
         'cooldown': 2
@@ -38,8 +40,9 @@ spells = [
         'name': 'void',
         'visual': MAGENTA + 'Void' + RESET,
         'type': DAMAGING,
-        'dice': { 'base': 8, 'delay': { 'd10': 2 } },
-        'description': 'Wraps the opponent in void tendrils, dealing 8 damage up front and 2 - 20 damage the following turn',
+        'dice': { 'base': 8, 'd10': 2 },
+        'range': 0,
+        'description': 'Wraps the opponent in void tendrils, dealing 10 - 28 damage',
         'crit-chance': 0,
         'cooldown': 2
     },
@@ -48,6 +51,7 @@ spells = [
         'visual': BLUE + "Tsunami" + RESET,
         'type': DAMAGING,
         'dice': { 'base': 12, 'd6': 4 },
+        'range': 2,
         'description': 'Hits the opponent with a massive wave of water dealing 16 - 36 damage',
         'crit-chance': 25,
         'cooldown': 4
