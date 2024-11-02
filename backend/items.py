@@ -55,6 +55,16 @@ spells = [
         'description': 'Hits the opponent with a massive wave of water dealing 16 - 36 damage',
         'crit-chance': 25,
         'cooldown': 4
+    },
+    {
+        'name': 'tornado',
+        'visual': "Tornado",
+        'type': DAMAGING,
+        'dice': { 'base': 15, 'd4': 3 },
+        'range': 2,
+        'description': 'Hits opponent',
+        'crit-chance': 5,
+        'cooldown': 4
     }
 ]
 
@@ -77,6 +87,37 @@ def GetSpells(amount):
                 chosen.append(copy.deepcopy(spells[choice]))
     
     return chosen
+
+potions = [
+    {
+        'name': 'health',
+        'visual': RED + 'Health Potion' + RESET,
+        'effect': HEALING,
+        'dice': { 'base': 5, 'd6': 2 },
+        'description': 'Heals 7 - 17 health',
+        'length': 0
+    },
+    {
+        'name': 'ghealth',
+        'visual': RED + 'Greater Health Potion' + RESET,
+        'effect': HEALING,
+        'dice': { 'base': 10, 'd6': 3 },
+        'description': 'Heals 13 - 28 health',
+        'length': 0
+    },
+    # {
+    #     'name': 'strength',
+    #     'visual': MAGENTA + 'Strength Potion' + RESET,
+    #     'effect': BUFF,
+    #     'dice': { 'base': 5, 'd4': 3 },
+    #     'description': 'Adds 8 - 17 additional damage to spells for 3 turns',
+    #     'length': 3
+    # }
+]
+
+def GetPotion():
+    chosen = random.randint(0, len(potions) - 1)
+    return copy.deepcopy(potions[chosen])
         
 
 

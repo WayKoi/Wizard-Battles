@@ -47,6 +47,10 @@ LEFT = 0
 MIDDLE = 1
 RIGHT = 2
 
+DAMAGING = 1
+HEALING = 2
+BUFF = 3
+
 POS_NAMES = [
     'left',
     'middle',
@@ -108,7 +112,7 @@ def receive(client: socket.socket):
     if message == DISCONNECT_MESSAGE:
         disconnect(client)
     else:
-        print(f"[{clients[client]['address']}] : {message}")
+        # print(f"[{clients[client]['address']}] : {message}")
 
         state = clients[client]['game-state']
 
@@ -137,6 +141,8 @@ def receive(client: socket.socket):
             # prompt for item or potion, or whatever they chose
             choice = int(message)
 
+            clients[client]['tokens'] -= 1
+
             if choice == TOKEN_SPELL:
                 spells = items.GetSpells(2)
                 clients[client]['choices'] = spells
@@ -153,11 +159,48 @@ def receive(client: socket.socket):
 
                 clients[client]['game-state'] = GAME_SPELL
             elif choice == TOKEN_ARMOUR:
-                pass
-            elif choice == TOKEN_POTION:
-                pass
+                gain = random.randint(10, 25)
+                clients[client]['health'] += gain
+                
+                print(f'[GAIN HEALTH] {clients[client]["name"]} gained {gain} health')
 
-            clients[client]['tokens'] -= 1
+                send(client, json.dumps({
+                    'messages': [
+                        f'{clients[client]["name"]} gained {GREEN}{gain}{RESET} Health!',
+                        f'{clients[client]["name"]} now has {GREEN}{clients[client]["health"]}{RESET} health'
+                    ]
+                }))
+
+                if clients[client]['tokens'] > 0:
+                    send(client, tokenMessage(client))
+                else:
+                    print(f'[ADDED TO BATTLE QUEUE] {clients[client]["address"]}')
+                    send(client, QUEUE_MESSAGE)
+                    clients[client]['game-state'] = GAME_QUEUE
+
+                    matchmaking()
+            elif choice == TOKEN_POTION:
+                gain = items.GetPotion()
+                clients[client]['potions'].append(gain)
+                
+                print(f'[GET POTION] {clients[client]["name"]} got {gain["visual"]}')
+
+                send(client, json.dumps({
+                    'messages': [
+                        f'{clients[client]["name"]} got a {gain["visual"]}',
+                        f'{gain["description"]}'
+                    ]
+                }))
+
+                if clients[client]['tokens'] > 0:
+                    send(client, tokenMessage(client))
+                else:
+                    print(f'[ADDED TO BATTLE QUEUE] {clients[client]["address"]}')
+                    send(client, QUEUE_MESSAGE)
+                    clients[client]['game-state'] = GAME_QUEUE
+
+                    matchmaking()
+            
         elif state == GAME_SPELL:
             choice = int(message) - 1
 
@@ -189,23 +232,45 @@ def receive(client: socket.socket):
             player = got['player']
 
             if message.isdigit(): # cast a spell
-                player['move'] = {
-                    'spell': player['spells'][int(message) - 1], 
-                    'target': 0
-                }
+                choice = int(message) - 1
 
-                clients[client]['game-state'] = BATTLE_TARGET
-                send(client, json.dumps({
-                    'messages': [
-                        'Where would you like to target?',
-                        '  1. Left',
-                        '  2. Middle',
-                        '  3. Right',
-                        ''
-                    ],
-                    'input': 'choice',
-                    'choices': [ '1', '2', '3' ]
-                }))
+                if choice < len(player['spells']):
+                    player['move'] = {
+                        'spell': player['spells'][choice], 
+                        'target': 0
+                    }
+
+                    clients[client]['game-state'] = BATTLE_TARGET
+                    send(client, json.dumps({
+                        'messages': [
+                            'Where would you like to target?',
+                            '  1. Left',
+                            '  2. Middle',
+                            '  3. Right',
+                            ''
+                        ],
+                        'input': 'choice',
+                        'choices': [ '1', '2', '3' ]
+                    }))
+                else: # potion
+                    choice -= len(player['spells'])
+                    player['move'] = player['potions'][choice]
+
+                    clients[client]['game-state'] = BATTLE_WAIT
+                    send(client, COMM_MESSAGE)
+
+                    if current['first'] == None:
+                        current['first'] = player
+
+                    checkBattle(current)
+
+            elif message == 'pass':
+                player['move'] = None
+                clients[client]['game-state'] = BATTLE_WAIT
+                send(client, COMM_MESSAGE)
+
+                checkBattle(current)
+
             else: # must be a movement
                 player['move'] = message
                 clients[client]['game-state'] = BATTLE_WAIT
@@ -233,6 +298,9 @@ def receive(client: socket.socket):
 
             checkBattle(current)
                 
+def visual(client):
+    return clients[client]['name']
+
 def getBattle(client):
     current = None
     player = None
@@ -303,7 +371,8 @@ def connect():
         'address': addr,
         'game-state': GAME_INIT,
         'spells': [],
-        'tokens': 5,
+        'potions': [],
+        'tokens': 4,
         'rounds-won': 0,
         'health': 50,
         'choices': [],
@@ -313,24 +382,29 @@ def connect():
     print(f'[NEW CONNECTION] {addr} connected')
     print(f'[ACTIVE CLIENTS] {len(clients)}')
 
+def rollDice(rollable):
+    amount = rollable['dice']['base']
+
+    if 'd4' in rollable['dice']:
+        for i in range(rollable['dice']['d4']):
+            amount += random.randint(1, 4)
+    
+    if 'd6' in rollable['dice']:
+        for i in range(rollable['dice']['d6']):
+            amount += random.randint(1, 6)
+    
+    if 'd8' in rollable['dice']:
+        for i in range(rollable['dice']['d8']):
+            amount += random.randint(1, 8)
+
+    if 'd10' in rollable['dice']:
+        for i in range(rollable['dice']['d10']):
+            amount += random.randint(1, 10)
+    
+    return amount
+
 def dealDamage(spell, target, opponent) -> str:
-    damage = spell['dice']['base']
-
-    if 'd4' in spell['dice']:
-        for i in range(spell['dice']['d4']):
-            damage += random.randint(1, 4)
-    
-    if 'd6' in spell['dice']:
-        for i in range(spell['dice']['d6']):
-            damage += random.randint(1, 6)
-    
-    if 'd8' in spell['dice']:
-        for i in range(spell['dice']['d8']):
-            damage += random.randint(1, 8)
-
-    if 'd10' in spell['dice']:
-        for i in range(spell['dice']['d10']):
-            damage += random.randint(1, 10)
+    damage = rollDice(spell)
     
     distance = abs(target - opponent['position'])
 
@@ -351,6 +425,8 @@ def createBattle(clientA, clientB):
             'client': clientA,
             'health': clients[clientA]['health'],
             'spells': wrapSpells(clients[clientA]['spells']),
+            'potions': wrapPotions(clients[clientA]['potions']),
+            'buffs': [],
             'position': MIDDLE,
             'move': None
         },
@@ -360,6 +436,8 @@ def createBattle(clientA, clientB):
             'client': clientB,
             'health': clients[clientB]['health'],
             'spells': wrapSpells(clients[clientB]['spells']),
+            'potions': wrapPotions(clients[clientB]['potions']),
+            'buffs': [],
             'position': MIDDLE,
             'move': None
         },
@@ -379,6 +457,18 @@ def wrapSpells(spells):
     
     return wrapped
 
+def wrapPotions(potions):
+    wrapped = []
+
+    for potion in potions:
+        wrapped.append({
+            'potion': potion,
+            'used': False,
+            'visual': potion['visual']
+        })
+
+    return wrapped
+
 def checkBattle(battle):
     a = battle['a']
     b = battle['b']
@@ -387,7 +477,7 @@ def checkBattle(battle):
         'messages': []
     }
 
-    print(RED + '[CHECK BATTLE]' + RESET)
+    # print(RED + '[CHECK BATTLE]' + RESET)
 
     if clients[a['client']]['game-state'] == BATTLE_WAIT and clients[b['client']]['game-state'] == BATTLE_WAIT:
         if battle['first'] == a:
@@ -417,7 +507,7 @@ def checkBattle(battle):
             mess['messages'].append(RED + f'{b["name"]} falls!' + RESET)
             mess['messages'].append(GREEN + f'{a["name"]} is the Winner!' + RESET)
         else:
-            mess['messages'].append('The Battle Continues!')
+            mess['messages'].append('The Battle Will Continue!')
             finished = False
 
         time.sleep(1)
@@ -430,24 +520,120 @@ def checkBattle(battle):
             clients[a['client']]['game-state'] = GAME_BATTLE
             clients[b['client']]['game-state'] = GAME_BATTLE
 
-            time.sleep(5)
+            time.sleep(3)
+
+            for spell in a['spells']:
+                if spell['cooldown'] > 0:
+                    spell['cooldown'] -= 1
+            
+            for spell in b['spells']:
+                if spell['cooldown'] > 0:
+                    spell['cooldown'] -= 1
 
             send(a['client'], battleMessage(battle, a['client']))
             send(b['client'], battleMessage(battle, b['client']))
+        else:
+            battles.remove(battle)
+
+            if aFell:
+                send(a['client'], json.dumps({
+                    'messages': [
+                        RED + a['name'] + ' was slain' + RESET,
+                        YELLOW + 'Your Journey Ends Here' + RESET,
+                        ''
+                    ]
+                }))
+
+                send(a['client'], DISCONNECT_MESSAGE)
+            else:
+                client = a['client']
+
+                print(f'[ADDED TO BATTLE QUEUE] {clients[client]["address"]}')
+                send(client, json.dumps({
+                    'messages': [
+                        YELLOW + 'Your Journey Continues' + RESET,
+                        ''
+                    ]
+                }))
+                send(client, QUEUE_MESSAGE)
+                clients[client]['game-state'] = GAME_QUEUE
+
+                matchmaking()
+            
+            if bFell:
+                send(b['client'], json.dumps({
+                    'messages': [
+                        RED + b['name'] + ' was slain' + RESET,
+                        YELLOW + 'Your Journey Ends Here' + RESET,
+                        ''
+                    ]
+                }))
+
+                send(b['client'], DISCONNECT_MESSAGE)
+            else:
+                client = b['client']
+
+                print(f'[ADDED TO BATTLE QUEUE] {clients[client]["address"]}')
+                send(client, json.dumps({
+                    'messages': [
+                        YELLOW + 'Your Journey Continues' + RESET,
+                        ''
+                    ]
+                }))
+                send(client, QUEUE_MESSAGE)
+                clients[client]['game-state'] = GAME_QUEUE
+
+                matchmaking()
+
 
 def playTurn (a, b):
     mess = []
 
+    if a['move'] == None:
+        print(f'{CYAN}[BATTLE]{RESET} {a["name"]} passes')
+        mess.append(f'{a["name"]} passes their turn')
+        return mess
+
     if a['move'] == 'left':
+        print(f'{CYAN}[BATTLE]{RESET} {a["name"]} moves left')
         a['position'] -= 1
         mess.append(f'{a["name"]} moves left!')
     elif a['move'] == 'right':
+        print(f'{CYAN}[BATTLE]{RESET} {a["name"]} moves right')
         a['position'] += 1
         mess.append(f'{a["name"]} moves right!')
-    else:
+    elif 'spell' in a['move']:
+        a['move']['spell']['cooldown'] = a['move']['spell']['spell']['cooldown'] + 1
         target = POS_NAMES[a['move']['target']]
+        
+        print(f'{CYAN}[BATTLE]{RESET} {a["name"]} casts {a["move"]["spell"]["visual"]} in the {target}')
+        
         mess.append(f'{a["name"]} casts {a["move"]["spell"]["visual"]} in the {target}!')
         mess.append(dealDamage(a['move']['spell']['spell'], a['move']['target'], b))
+    else: # potion
+        potion = a['move']
+        print(f'{CYAN}[BATTLE]{RESET} {a["name"]} drinks a {potion["visual"]}')
+
+        mess.append(f'{a["name"]} drinks a {potion["visual"]}')
+        mess.extend(playPotion(a, potion))
+    return mess
+
+def playPotion (player, potion):
+    mess = []
+    base = potion['potion']
+
+    if base['effect'] == HEALING:
+        amount = rollDice(base)
+        maxheal = clients[player["client"]]['health'] - player['health']
+        amount = min(amount, maxheal)
+
+        player['health'] += amount
+
+        mess.append(f'{player["name"]} heals {GREEN}{amount}{RESET} health')
+    elif base['effect'] == BUFF:
+        pass
+
+    potion['used'] = True
 
     return mess
 
@@ -458,7 +644,7 @@ def tokenMessage(client) -> str:
 
     message = {
         'messages': [
-            'You have ' + YELLOW + str(state["tokens"]) + RESET + ' tokens left',
+            f'\n{YELLOW}You have {str(state["tokens"])} tokens left{RESET}',
             'You can spend a token to purchase one of the following',
             '  1. A New Spell',
             '  2. Armour',
@@ -497,8 +683,21 @@ def battleMessage(battle, client):
 
     count = 1
     for spell in player['spells']:
-        message['messages'].append(f'  {count}. {spell["visual"]}')
-        message['choices'].append(str(count))
+        if spell['cooldown'] <= 0:
+            message['messages'].append(f'  {count}. {spell["visual"]}')
+            message['choices'].append(str(count))
+        else:
+            message['messages'].append(f'     {spell["visual"]} ({spell["cooldown"]} turns)')
+        
+        count += 1
+    
+    for potion in player['potions']:
+        if not potion['used']:
+            message['messages'].append(f'  {count}. {potion["visual"]}')
+            message['choices'].append(str(count))
+        else: 
+            message['messages'].append(f'     {potion["visual"]} (used)')
+        
         count += 1
 
     move = 'you can also move '
@@ -513,15 +712,18 @@ def battleMessage(battle, client):
     else:
         move += 'left'
         message['choices'].append('left')
+    
+    move += ' or pass'
+    message['choices'].append('pass')
 
     message['messages'].append(move)
     message['messages'].append('What would you like to do?')
 
     return json.dumps(message)
 
-def printPosition(battle, player = False):
+def printPosition(player, isplayer = False):
     blank = '  •  '
-    visual = battle['visual']
+    visual = player['visual']
 
     line = [
         blank,
@@ -529,12 +731,17 @@ def printPosition(battle, player = False):
         blank
     ]
 
-    if not player:
-        line[battle['position']] = RED + visual + RESET
+    if not isplayer:
+        line[player['position']] = RED + visual + RESET
     else:
-        line[battle['position']] = GREEN + visual + RESET
+        line[player['position']] = GREEN + visual + RESET
 
-    return line[0] + line[1] + line[2]
+    namecard = f'{player["name"]} ({player["health"]} / {clients[player["client"]]["health"]})'
+
+    if isplayer:
+        return line[0] + line[1] + line[2] + '\n' + namecard
+    
+    return namecard + '\n' + line[0] + line[1] + line[2]
 
 def visualPrompt():
     prompt = {
@@ -587,10 +794,15 @@ def matchmaking():
         send(ready[0], battleMessage(battle, ready[0]))
         send(ready[1], battleMessage(battle, ready[1]))
 
+# thread for making sure threads stay running
+# thread for connecting
+# thread for recieving
+# main thread takes input to shutdown
+
 if __name__ == '__main__':
     start()
 
-    print(VISUALS)
+    # print(VISUALS)
     
     connectThread = Thread(target = connectLoop, args = ())
     connectThread.start()

@@ -36,12 +36,14 @@ class Client:
             self.client.send(encoded_message)
         except:
             print('Could not send message')
+            self.disconnect(False)
     
-    def disconnect(self):
+    def disconnect(self, send = True):
         if not self.connected:
             return
         
-        self.send(DISCONNECT_MESSAGE)
+        if send:
+            self.send(DISCONNECT_MESSAGE)
         self.client.detach()
         
         self.connected = False

@@ -8,6 +8,17 @@ class Game(Client):
     def process(self, message):
         data = json.loads(message)
 
+        '''
+        {
+            'messages': [
+                'this is a message',
+                'this is another'
+            ],
+            'input': <'string' or 'choice'>,
+            'choices': [ '1', '2', '3' ]
+        }
+        '''
+        
         print()
         for message in data['messages']:
             if message == '!CLEAR':
@@ -19,7 +30,11 @@ class Game(Client):
             return
 
         if data['input'] == 'string':
-            string = input('> ')
+            string = ''
+            
+            while string == '':
+                string = input('> ')
+            
             self.send(string)
         elif data['input'] == 'choice':
             valid = False
