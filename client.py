@@ -1,6 +1,7 @@
 import socket
 import select
 from threading import Thread
+import os
 
 HEADER = 64
 PORT = 5050
@@ -11,6 +12,11 @@ LOCAL_IP = socket.gethostbyname(socket.gethostname())
 ADDR = (SERVER, PORT)
 
 DISCONNECT_MESSAGE = '!DISCONNECT'
+PING_MESSAGE = '!PING'
+PONG_MESSAGE = '!PONG'
+
+clear = 'cls' if os.name == 'nt' else 'clear'
+CLEAR_MESSAGE = '!CLEAR'
 
 class Client:
     def __init__(self):
@@ -63,6 +69,12 @@ class Client:
             
             if message == DISCONNECT_MESSAGE:
                 self.disconnect()
+                return
+            elif message == PING_MESSAGE:
+                self.send(PONG_MESSAGE)
+                return
+            elif message == CLEAR_MESSAGE:
+                os.system(clear)
                 return
 
             self.process(message)

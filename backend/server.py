@@ -6,23 +6,18 @@ import items
 import random
 import time
 
-BLACK = '\u001b[30m'
-RED = '\u001b[31m'
-GREEN = '\u001b[32m'
-YELLOW = '\u001b[33m'
-BLUE = '\u001b[34m'
-MAGENTA = '\u001b[35m'
-CYAN = '\u001b[36m'
-WHITE = '\u001b[37m'
-RESET = '\u001b[0m'
+from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
 
 HEADER = 64
 PORT = 5050
 LOCAL_IP = socket.gethostbyname(socket.gethostname())
 ADDR = (LOCAL_IP, PORT)
 FORMAT = 'utf-8'
+
 DISCONNECT_MESSAGE = '!DISCONNECT'
 CLEAR_MESSAGE = '!CLEAR'
+PING_MESSAGE = '!PING'
+PONG_MESSAGE = '!PONG'
 
 GAME_INIT = 0
 GAME_VISUAL = -1
@@ -112,8 +107,6 @@ def receive(client: socket.socket):
     if message == DISCONNECT_MESSAGE:
         disconnect(client)
     else:
-        # print(f"[{clients[client]['address']}] : {message}")
-
         state = clients[client]['game-state']
 
         if state == GAME_INIT:
@@ -535,56 +528,35 @@ def checkBattle(battle):
         else:
             battles.remove(battle)
 
-            if aFell:
-                send(a['client'], json.dumps({
-                    'messages': [
-                        RED + a['name'] + ' was slain' + RESET,
-                        YELLOW + 'Your Journey Ends Here' + RESET,
-                        ''
-                    ]
-                }))
+            battle_end(a)
+            battle_end(b)
 
-                send(a['client'], DISCONNECT_MESSAGE)
-            else:
-                client = a['client']
+def battle_end(wiz):
+    if wiz['health'] <= 0:
+        send(wiz['client'], json.dumps({
+            'messages': [
+                RED + wiz['name'] + ' was slain' + RESET,
+                YELLOW + 'Your Journey Ends Here' + RESET,
+                ''
+            ]
+        }))
 
-                print(f'[ADDED TO BATTLE QUEUE] {clients[client]["address"]}')
-                send(client, json.dumps({
-                    'messages': [
-                        YELLOW + 'Your Journey Continues' + RESET,
-                        ''
-                    ]
-                }))
-                send(client, QUEUE_MESSAGE)
-                clients[client]['game-state'] = GAME_QUEUE
+        send(wiz['client'], DISCONNECT_MESSAGE)
+    else:
+        client = wiz['client']
 
-                matchmaking()
-            
-            if bFell:
-                send(b['client'], json.dumps({
-                    'messages': [
-                        RED + b['name'] + ' was slain' + RESET,
-                        YELLOW + 'Your Journey Ends Here' + RESET,
-                        ''
-                    ]
-                }))
+        print(f'[ADDED TO BATTLE QUEUE] {clients[client]["address"]}')
+        send(client, json.dumps({
+            'messages': [
+                YELLOW + 'Your Journey Continues' + RESET,
+                ''
+            ]
+        }))
+        
+        send(client, QUEUE_MESSAGE)
+        clients[client]['game-state'] = GAME_QUEUE
 
-                send(b['client'], DISCONNECT_MESSAGE)
-            else:
-                client = b['client']
-
-                print(f'[ADDED TO BATTLE QUEUE] {clients[client]["address"]}')
-                send(client, json.dumps({
-                    'messages': [
-                        YELLOW + 'Your Journey Continues' + RESET,
-                        ''
-                    ]
-                }))
-                send(client, QUEUE_MESSAGE)
-                clients[client]['game-state'] = GAME_QUEUE
-
-                matchmaking()
-
+        matchmaking()
 
 def playTurn (a, b):
     mess = []
@@ -797,6 +769,7 @@ def matchmaking():
 # thread for making sure threads stay running
 # thread for connecting
 # thread for recieving
+# thread for pinging clients
 # main thread takes input to shutdown
 
 if __name__ == '__main__':

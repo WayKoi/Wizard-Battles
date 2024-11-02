@@ -1,30 +1,13 @@
 from client import Client
 import json
-import os
-
-clear = 'cls' if os.name == 'nt' else 'clear'
 
 class Game(Client):
     def process(self, message):
         data = json.loads(message)
-
-        '''
-        {
-            'messages': [
-                'this is a message',
-                'this is another'
-            ],
-            'input': <'string' or 'choice'>,
-            'choices': [ '1', '2', '3' ]
-        }
-        '''
         
         print()
         for message in data['messages']:
-            if message == '!CLEAR':
-                os.system(clear)
-            else:
-                print(message)
+            print(message)
 
         if not ('input' in data):
             return

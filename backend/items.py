@@ -1,15 +1,6 @@
 import random
 import copy
-
-BLACK = '\u001b[30m'
-RED = '\u001b[31m'
-GREEN = '\u001b[32m'
-YELLOW = '\u001b[33m'
-BLUE = '\u001b[34m'
-MAGENTA = '\u001b[35m'
-CYAN = '\u001b[36m'
-WHITE = '\u001b[37m'
-RESET = '\u001b[0m'
+from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
 
 DAMAGING = 1
 HEALING = 2
@@ -54,16 +45,6 @@ spells = [
         'range': 2,
         'description': 'Hits the opponent with a massive wave of water dealing 16 - 36 damage',
         'crit-chance': 25,
-        'cooldown': 4
-    },
-    {
-        'name': 'tornado',
-        'visual': "Tornado",
-        'type': DAMAGING,
-        'dice': { 'base': 15, 'd4': 3 },
-        'range': 2,
-        'description': 'Hits opponent',
-        'crit-chance': 5,
         'cooldown': 4
     }
 ]
