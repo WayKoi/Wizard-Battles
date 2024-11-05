@@ -6,6 +6,9 @@ import items
 import random
 import time
 
+import os
+clear = 'cls' if os.name == 'nt' else 'clear'
+
 from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
 
 HEADER = 64
@@ -785,6 +788,8 @@ if __name__ == '__main__':
         if string == 'stop':
             for client in clients:
                 send(client, DISCONNECT_MESSAGE)
+        elif string == 'clear':
+            os.system(clear)
             
             shutdown = True
         

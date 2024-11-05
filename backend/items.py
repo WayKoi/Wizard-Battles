@@ -6,6 +6,15 @@ DAMAGING = 1
 HEALING = 2
 BUFF = 3
 
+class Spell:
+    pass
+
+class Potion:
+    pass
+
+class Dice:
+    pass
+
 spells = [
     {
         'name': 'fireball',
