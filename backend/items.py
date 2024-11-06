@@ -1,61 +1,93 @@
 import random
 import copy
-from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
 
-DAMAGING = 1
-HEALING = 2
-BUFF = 3
+from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
+from constant import DARK, BOLD
+from constant import DAMAGING, HEALING, BUFF
+
+class Dice:
+    def __init__(self, base, d4 = 0, d6 = 0, d8 = 0, d10 = 0) -> None:
+        self.base = base
+        self.d4 = d4
+        self.d6 = d6
+        self.d8 = d8
+        self.d10 = d10
+    
+    def roll(self) -> int:
+        amount = self.base
+
+        for i in range(self.d4):
+            amount += random.randint(1, 4)
+        
+        for i in range(self.d6):
+            amount += random.randint(1, 6)
+        
+        for i in range(self.d8):
+            amount += random.randint(1, 8)
+        
+        for i in range(self.d10):
+            amount += random.randint(1, 10)
+        
+        return amount
 
 class Spell:
-    pass
+    def __init__(self, name, visual, type, dice: Dice, range, desc, crit, cooldown) -> None:
+        self.name: str   = name
+        self.visual: str = visual
+        self.type: int   = type
+        self.dice: Dice  = dice,
+        self.range: int  = range
+        self.desc: str   = desc
+        self.crit: int   = crit
+        self.cooldown: int = cooldown
+
+    def roll(self) -> int:
+        return self.dice.roll()
 
 class Potion:
     pass
 
-class Dice:
-    pass
-
 spells = [
-    {
-        'name': 'fireball',
-        'visual': RED + 'Fireball' + RESET,
-        'type': DAMAGING,
-        'dice': { 'base': 5, 'd4': 4 },
-        'range': 1,
-        'description': 'Shoots a powerful Fireball at the opponent, dealing 9 - 21 damage',
-        'crit-chance': 10,
-        'cooldown': 1
-    },
-    {
-        'name': 'bolt',
-        'visual': YELLOW + 'Bolt' + RESET,
-        'type': DAMAGING,
-        'dice': { 'base': 2, 'd8': 3 },
-        'range': 1,
-        'description': 'Shoots a bolt of lightning at the opponent, dealing 5 - 26 damage',
-        'crit-chance': 20,
-        'cooldown': 2
-    },
-    {
-        'name': 'void',
-        'visual': MAGENTA + 'Void' + RESET,
-        'type': DAMAGING,
-        'dice': { 'base': 8, 'd10': 2 },
-        'range': 0,
-        'description': 'Wraps the opponent in void tendrils, dealing 10 - 28 damage',
-        'crit-chance': 0,
-        'cooldown': 2
-    },
-    {
-        'name': 'tsunami',
-        'visual': BLUE + "Tsunami" + RESET,
-        'type': DAMAGING,
-        'dice': { 'base': 12, 'd6': 4 },
-        'range': 2,
-        'description': 'Hits the opponent with a massive wave of water dealing 16 - 36 damage',
-        'crit-chance': 25,
-        'cooldown': 4
-    }
+    Spell(
+        'fireball',
+        RED + 'Fireball' + RESET,
+        DAMAGING,
+        Dice(5, d4 = 4),
+        1,
+        'Shoots a powerful Fireball at the opponent, dealing 9 - 21 damage',
+        10,
+        1
+    ),
+    Spell(
+        'bolt',
+        YELLOW + 'Bolt' + RESET,
+        DAMAGING,
+        Dice(2, d8 = 3),
+        1,
+        'Shoots a bolt of lightning at the opponent, dealing 5 - 26 damage',
+        20,
+        2
+    ),
+    Spell(
+        'void',
+        MAGENTA + DARK + 'Void' + RESET,
+        DAMAGING,
+        Dice(8, d10 = 2),
+        0,
+        'Wraps the opponent in void tendrils, dealing 10 - 28 damage',
+        0,
+        2
+    ),
+    Spell(
+        'tsunami',
+        BLUE + 'Tsunami' + RESET,
+        DAMAGING,
+        Dice(12, d6 = 3),
+        2,
+        'Hits the opponent with a massive wave of water dealing 16 - 30 damage',
+        25,
+        4
+    )
 ]
 
 def GetSpells(amount):

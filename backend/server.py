@@ -1,92 +1,30 @@
-import socket
-import select
-import json
+import socket, select, json, random, time
 from threading import Thread
-import items
-import random
-import time
 
 import os
 clear = 'cls' if os.name == 'nt' else 'clear'
 
+import items
+
+import message
+from message import DISCONNECT_MESSAGE, PONG_MESSAGE, PING_MESSAGE, CLEAR_MESSAGE
+from message import QUEUE_MESSAGE, COMM_MESSAGE, NAME_PROMPT
+
 from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
+
+from constant import GAME_INIT, GAME_BATTLE, GAME_POTION, GAME_QUEUE, GAME_SPELL, GAME_START, GAME_TOKEN, GAME_VISUAL
+from constant import BATTLE_CHOOSE, BATTLE_TARGET, BATTLE_WAIT
+from constant import TOKEN_ARMOUR, TOKEN_POTION, TOKEN_SPELL
+from constant import LEFT, RIGHT, MIDDLE
+from constant import VISUALS, POS_NAMES
+
+from constant import DAMAGING, HEALING, BUFF
 
 HEADER = 64
 PORT = 5050
 LOCAL_IP = socket.gethostbyname(socket.gethostname())
 ADDR = (LOCAL_IP, PORT)
 FORMAT = 'utf-8'
-
-DISCONNECT_MESSAGE = '!DISCONNECT'
-CLEAR_MESSAGE = '!CLEAR'
-PING_MESSAGE = '!PING'
-PONG_MESSAGE = '!PONG'
-
-GAME_INIT = 0
-GAME_VISUAL = -1
-GAME_START = 1
-
-GAME_TOKEN = 2
-GAME_SPELL = 3
-GAME_POTION = 4
-
-GAME_QUEUE = 5
-GAME_BATTLE = 6
-
-BATTLE_CHOOSE = 7
-BATTLE_TARGET = 8
-BATTLE_WAIT = 9
-
-TOKEN_SPELL = 1
-TOKEN_ARMOUR = 2
-TOKEN_POTION = 3
-
-LEFT = 0
-MIDDLE = 1
-RIGHT = 2
-
-DAMAGING = 1
-HEALING = 2
-BUFF = 3
-
-POS_NAMES = [
-    'left',
-    'middle',
-    'right'
-]
-
-VISUALS = [
-    '(O_O)',
-    '(^_^)',
-    '(+_+)',
-    '(>.<)',
-    '(^_-)',
-    '(o-o)',
-    '(OwO)',
-    '(UwU)'
-]
-
-NAME_PROMPT = json.dumps({
-    'messages': [
-        GREEN + 'Successfully Connected!' + RESET,
-        'What would you like to name your wizard?'
-    ],
-    'input': 'string'
-})
-
-QUEUE_MESSAGE = json.dumps({
-    'messages': [
-        CYAN + '      You have used all your tokens' + RESET,
-        RED +  '        Entering the Battle Queue' + RESET,
-               'You will be matched up with an opponent soon'
-    ]
-})
-
-COMM_MESSAGE = json.dumps({
-    'messages': [
-        YELLOW + 'Communicating...' + RESET
-    ]
-})
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind(ADDR)
