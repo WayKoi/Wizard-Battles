@@ -10,16 +10,18 @@ CHOICE = MAGENTA + '[CHOICE]' + RESET
 QUEUE = BLUE + BOLD + '[QUEUE]' + RESET
 TOKEN = YELLOW + DARK + '[TOKEN]' + RESET
 
+PING_PONG = DARK + GREEN + '[PING-PONG]' + RESET
+
 DEBUG = RED + BLINK + '[DEBUG]' + RESET
 ERROR = RED + BLINK + SWAP + '[ERROR]' + RESET
 
 debug = True
 
 def out(messageType: str, content: str) -> str:
-    if messageType == DEBUG and not debug:
+    if (messageType == DEBUG or messageType == PING_PONG) and not debug:
         return
     
-    print(messageType + content)
+    print(messageType, content)
 
 # client messages
 

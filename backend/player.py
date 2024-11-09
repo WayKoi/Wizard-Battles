@@ -7,17 +7,17 @@ class Client:
     def __init__(self, socket, address) -> None:
         self.socket = socket
         self.address = address
-        self.state = GAME_INIT
-        
-        self.spells = []
-        self.potions = []
-
-        self.won = 0
-        self.tokens = 4
-        self.health = 50
-        
-        self.choices = []
-
-        self.name = 'Wizard'
-        self.visual = VISUALS[0]
+        self.name = None
     
+    def rename(self, name: str):
+        self.name = name
+    
+    def get_name(self):
+        if self.name != None:
+            return self.name
+
+        return self.address
+
+class Player:
+    def __init__(self) -> None:
+        pass
