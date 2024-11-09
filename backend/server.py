@@ -8,6 +8,8 @@ import items
 
 from player import Client, Player
 
+from battle import Battle
+
 import message as ms
 from message import out
 from message import DISCONNECT_MESSAGE, PONG_MESSAGE, PING_MESSAGE, CLEAR_MESSAGE
@@ -39,6 +41,10 @@ players = {}
 battles = []
 
 shutdown = False
+
+# --------------------------------------
+# Send / Recieve
+# --------------------------------------
 
 def receive(socket: socket.socket):
     header = socket.recv(HEADER).decode(FORMAT).strip()
@@ -78,6 +84,10 @@ def send(socket: socket.socket, message: str) -> bool:
         disconnect(socket)
         return False
 
+# --------------------------------------
+# Connection
+# --------------------------------------
+
 def disconnect(socket: socket.socket):
     name = get_name(socket)
 
@@ -89,26 +99,34 @@ def disconnect(socket: socket.socket):
     out(ms.CONNECTION, f"{name} Disconnected")
     active_clients()
 
-def get_name(socket: socket.socket):
-    return clients[socket].get_name()
-
-def start():
-    server.listen()
-    out(ms.SERVER, f'Server started on {LOCAL_IP}')
-
 def connect():
     conn, addr = server.accept()
     
     sockets.append(conn)
     client = Client(conn, addr)
     clients[conn] = client
-    players[client] = {}
+    players[client] = Player(client)
     
     print(ms.CONNECTION, f'{addr} connected')
     active_clients()
 
 def active_clients():
     print(ms.CONNECTION, f'{len(sockets)} active clients')
+
+def disconnect_all():
+    for sock in sockets:
+        disconnect(sock)
+
+# -------------------------------------------
+# Clients
+# -------------------------------------------
+
+def get_name(socket: socket.socket):
+    return clients[socket].get_name()
+
+# ----------------------------------------
+# Threads
+# ----------------------------------------
 
 def thread_handler():
     con = Thread(target = connect_thread)
@@ -174,9 +192,13 @@ def ping_pong():
                 if success:
                     pings.append(sock)
 
-def disconnect_all():
-    for sock in sockets:
-        disconnect(sock)
+# -----------------------
+# Main
+# -----------------------
+
+def start():
+    server.listen()
+    out(ms.SERVER, f'Server started on {LOCAL_IP}')
 
 if __name__ == '__main__':
     start()
@@ -190,6 +212,9 @@ if __name__ == '__main__':
             shutdown = True
             out(ms.SERVER, 'Shutting Down')
             disconnect_all()
+        elif string == 'clear' or string == 'cls':
+            os.system(clear)
+            out(ms.SERVER, f'Server running on {LOCAL_IP}')
         
     handler.join()
 

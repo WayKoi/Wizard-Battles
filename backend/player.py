@@ -16,8 +16,14 @@ class Client:
         if self.name != None:
             return self.name
 
-        return self.address
+        return str(self.address)
 
 class Player:
-    def __init__(self) -> None:
-        pass
+    def __init__(self, client: Client) -> None:
+        self.client = client
+        self.state = GAME_INIT
+        self.health = 6
+        self.visual = VISUALS[0]
+        
+        self.spells  = []
+        self.potions = []
