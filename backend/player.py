@@ -1,6 +1,3 @@
-from constant import GAME_INIT, GAME_BATTLE, GAME_POTION, GAME_QUEUE, GAME_SPELL, GAME_START, GAME_TOKEN, GAME_VISUAL
-from constant import BATTLE_CHOOSE, BATTLE_TARGET, BATTLE_WAIT
-
 from constant import VISUALS
 
 class Client:

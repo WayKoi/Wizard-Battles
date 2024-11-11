@@ -19,24 +19,25 @@ RESET = '\u001b[0m'
 
 # Game states
 
-GAME_INIT = 0
-GAME_VISUAL = -1
-GAME_START = 1
+'''
+Ask for name and visual
+Ask for T1 spell
+Ask for T2 spell
+Ask for T3 spell or Ability
+Ask for Potion or Armour
+Ask for Potion or Armour
+'''
 
-GAME_TOKEN = 2
-GAME_SPELL = 3
-GAME_POTION = 4
+INIT_NAME = 0
+BUILD_T1 = 1
+BUILD_T2 = 2
+BUILD_T3 = 3
+BUILD_PA = 4 # potion or armour
 
-GAME_QUEUE = 5
-GAME_BATTLE = 6
+BATTLE_QUEUE = 5
+BATTLE_CHOOSE = 6
+BATTLE_WAIT = 7
 
-BATTLE_CHOOSE = 7
-BATTLE_TARGET = 8
-BATTLE_WAIT = 9
-
-TOKEN_SPELL = 1
-TOKEN_ARMOUR = 2
-TOKEN_POTION = 3
 
 # positions
 
