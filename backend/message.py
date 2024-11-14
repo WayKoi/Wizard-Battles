@@ -88,6 +88,7 @@ QUEUE_MESSAGE = json.dumps({
 
 COMM_MESSAGE = json.dumps({
     'messages': [
+        '!CLEAR',
         YELLOW + 'Communicating...' + RESET
     ]
 })

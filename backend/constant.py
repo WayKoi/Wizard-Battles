@@ -42,9 +42,10 @@ BATTLE_WAIT = 7
 
 # positions
 
-LEFT = 0
-MIDDLE = 1
-RIGHT = 2
+UP = 0
+LEFT = 1
+DOWN = 2
+RIGHT = 3
 
 POS_NAMES = [
     'left',

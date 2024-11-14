@@ -24,6 +24,8 @@ from constant import VISUALS, POS_NAMES
 
 from constant import DAMAGING, HEALING, BUFF
 
+from battle import A, B
+
 HEADER = 64
 PORT = 5050
 LOCAL_IP = socket.gethostbyname(socket.gethostname())
@@ -139,7 +141,7 @@ def get_name(socket: socket.socket):
 def thread_handler():
     con = Thread(target = connect_thread)
     rec = Thread(target = receive_thread)
-    ping = Thread(target = ping_pong)
+    # ping = Thread(target = ping_pong)
 
     while not shutdown:
         if not con.is_alive():
@@ -152,10 +154,10 @@ def thread_handler():
             rec.start()
             out(ms.DEBUG, '<receive> started')
         
-        if not ping.is_alive():
-            ping = Thread(target = ping_pong)
-            ping.start()
-            out(ms.DEBUG, '<ping-pong> started')
+        # if not ping.is_alive():
+        #     ping = Thread(target = ping_pong)
+        #     ping.start()
+        #     out(ms.DEBUG, '<ping-pong> started')
 
         time.sleep(2)
 
@@ -276,6 +278,10 @@ def handle_message(player: Player, message: str):
     elif player.state == BATTLE_QUEUE:
         send(player.client.socket, QUEUE_MESSAGE)
         check_queue()
+    elif player.state == BATTLE_CHOOSE:
+        send(player.client.socket, COMM_MESSAGE)
+        player.state = BATTLE_WAIT
+        check_battle()
 
 def give_spell(player: Player, spell: Spell):
     player.spells.append(spell)
@@ -297,9 +303,14 @@ def check_queue():
         if player.state == BATTLE_QUEUE:
             waiting.append(player)
     
+    out(ms.DEBUG, f'{len(waiting)} are waiting')
     while len(waiting) >= 2:
         a = waiting.pop(0)
         b = waiting.pop(0)
+
+        a.state = BATTLE_CHOOSE
+        b.state = BATTLE_CHOOSE
+
         battle = Battle(a, b)
         battles.append(battle)
 
@@ -319,9 +330,13 @@ def check_queue():
             ]
         }))
 
-        handle_battle(battle)
+        send_battle(battle)
 
-def handle_battle(battle: Battle):
+def send_battle(battle: Battle):
+    send(battle.a.player.client.socket, battle.get_message(A))
+    send(battle.b.player.client.socket, battle.get_message(B))
+
+def check_battle(battle: Battle):
     pass
 
 # -----------------------
@@ -336,7 +351,7 @@ if __name__ == '__main__':
     os.system(clear)
 
     start()
-    ms.debug = False
+    ms.debug = True
 
     handler = Thread(target = thread_handler)
     handler.start()

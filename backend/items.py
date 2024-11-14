@@ -20,10 +20,7 @@ TYPE_NAMES = [
     BOLD + GREEN + "     Static" + RESET
 ]
 
-UP = 0
-LEFT = 1
-DOWN = 2
-RIGHT = 3
+from constant import UP, DOWN, LEFT, RIGHT
 
 class Spell:
     def __init__(self, name: str, colour: str, extra: str, cast: str, damage: int, attack_type: int, pattern: list[(int, int)], cooldown: int, tier: int):
