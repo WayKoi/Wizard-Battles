@@ -2,6 +2,8 @@ import json
 from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
 from constant import BOLD, DARK, BLINK, SWAP
 
+from constant import VISUALS
+
 SERVER = WHITE + BOLD + '[SERVER]' + RESET
 CONNECTION = YELLOW + '[CONNECTION]' + RESET
 MATCHMAKING = CYAN + DARK + '[MATCHMAKING]' + RESET
@@ -25,24 +27,62 @@ def out(messageType: str, content: str) -> str:
 
 # client messages
 
+VISUAL_PROMPT = []
+VISUAL_CHOICES = []
+
+count = 1
+for visual in VISUALS:
+    VISUAL_PROMPT.append(f'  {count}. {visual}')
+    VISUAL_CHOICES.append(str(count))
+    count += 1
+
+VISUAL_PROMPT.insert(0, 'What would you like your wizard to look like?')
+VISUAL_PROMPT.insert(0, '!CLEAR')
+
 DISCONNECT_MESSAGE = '!DISCONNECT'
 CLEAR_MESSAGE = '!CLEAR'
 PING_MESSAGE = '!PING'
 PONG_MESSAGE = '!PONG'
 
-NAME_PROMPT = json.dumps({
+CONNECTED = json.dumps({
     'messages': [
         GREEN + 'Successfully Connected!' + RESET,
-        'What would you like to name your wizard?'
-    ],
-    'input': 'string'
+    ]
+})
+
+NAME_PROMPT = json.dumps({
+    'prompts' : [
+        {
+            'text': [ 'What would you like to name your wizard?' ],
+            'input': 'string'
+        },
+        {
+            'text': VISUAL_PROMPT,
+            'input': 'choice',
+            'choices': VISUAL_CHOICES
+        }
+    ]
+})
+
+POTION_ARMOUR_MESSAGE = json.dumps({
+    'messages': [ '!CLEAR' ],
+    'prompts': [
+        {
+            'text': [
+                'Would you like a potion or armour?'
+            ],
+            'input': 'choice',
+            'choices': [ 'potion', 'armour' ]
+        }
+    ]
 })
 
 QUEUE_MESSAGE = json.dumps({
     'messages': [
-        CYAN + '      You have used all your tokens' + RESET,
-        RED +  '        Entering the Battle Queue' + RESET,
-               'You will be matched up with an opponent soon'
+        '!CLEAR',
+        RED +          '        Entering the Battle Queue' + RESET,
+        BLACK + BOLD + 'You will be matched up with an opponent soon' + RESET,
+                CYAN + '                Waiting...' + RESET
     ]
 })
 

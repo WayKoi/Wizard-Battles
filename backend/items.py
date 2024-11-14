@@ -1,4 +1,4 @@
-import random
+import random, json
 
 from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
 from constant import DARK, BOLD
@@ -202,6 +202,68 @@ spells = [
         [(0, 1), (1, 0), (-1, 0), (0, -1), (1, 1), (-1, 1), (1, -1), (-1, -1), (0, -2), (0, 2), (-2, 0), (2, 0)],
         3,
         2
+    ),
+    Spell(
+        'Hellfire',
+        RED,
+        '',
+        'Summons a',
+        2,
+        ROW,
+        [],
+        3,
+        3
+    ),
+    Spell(
+        'Static',
+        YELLOW,
+        '',
+        'Creates',
+        1,
+        STATIC,
+        [
+            (0, 0), (0, 1), (0, 2), (0, 3), (0, 4),
+            (1, 0), (2, 0), (3, 0), (4, 0),
+            (4, 1), (4, 2), (4, 3), (4, 4),
+            (1, 4), (2, 4), (3, 4)
+        ],
+        1,
+        3
+    ),
+    Spell(
+        'Tsunami',
+        BLUE,
+        '',
+        'Calls a',
+        3,
+        STATIC,
+        [
+            (0, 0), (0, 1), (0, 2), (0, 3), (0, 4),
+            (1, 0), (1, 1), (1, 2), (1, 3), (1, 4),
+            (2, 0), (2, 1), (2, 2), (2, 3), (2, 4),
+            (3, 0), (3, 1), (3, 2), (3, 3), (3, 4),
+            (4, 0), (4, 1), (4, 2), (4, 3), (4, 4)
+        ],
+        6,
+        3
+    ),
+    Spell(
+        'Earthquake',
+        DARK + YELLOW,
+        '',
+        'Forces an',
+        3,
+        RELATIVE,
+        [
+            (0, 1), (1, 0), (-1, 0), (0, -1), (1, 1), 
+            (-1, 1), (1, -1), (-1, -1), (0, -2), (0, 2), 
+            (-2, 0), (2, 0), (2, -1), (2, 1),
+            (-2, 1), (-2, -1),
+            (-1, 2), (1, 2),
+            (-1, -2), (1, -2)
+        ],
+        5,
+        3
     )
 ]
 
@@ -218,6 +280,35 @@ def get_tier_amount(tier, amount):
     found = get_tier(tier)
     return random.choices(found, k = amount)
     
+def create_message(spell_tier):
+    start = {
+        'messages': [
+            '!CLEAR',
+            'Which spell would you like?'
+        ],
+        'prompts': [
+            {
+                'input': 'choice',
+                'choices': []
+            }
+        ]
+    }
+
+    spells = get_tier(spell_tier)
+
+    for spell in spells:
+        start['messages'].append(spell.display_spell())
+        start['prompts'][0]['choices'].append(spell.name.lower())
+
+    return json.dumps(start)
+
+def get_spell(name):
+    for spell in spells:
+        if name.lower() == spell.name.lower():
+            return spell
+    
+    return None
+
 if __name__ == '__main__':
     for spell in spells:
         print(spell.display_spell())

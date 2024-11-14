@@ -6,7 +6,19 @@
         "this is a message",
         "this is another"
     ],
-    "input": <"string" or "choice">,
-    "choices": [ "1", "2", "3" ]
+    "prompts": [
+        {
+            "text": ["this is a question?"],
+            "input": "choice",
+            "choices": [
+                "choice",
+                "other-choice"
+            ]
+        },
+        {
+            "text": ["info", "other question?"],
+            "input": "string"
+        }
+    ]
 }
 ```

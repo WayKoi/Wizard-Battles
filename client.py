@@ -18,6 +18,9 @@ PONG_MESSAGE = '!PONG'
 clear = 'cls' if os.name == 'nt' else 'clear'
 CLEAR_MESSAGE = '!CLEAR'
 
+RED = '\u001b[31m'
+RESET = '\u001b[0m'
+
 class Client:
     def __init__(self):
         self.connected = False
@@ -53,7 +56,7 @@ class Client:
         self.client.detach()
         
         self.connected = False
-        print('Client Disconnected')
+        print(RED + 'Client Disconnected' + RESET)
 
     def receive(self):
         if not self.connected:
@@ -66,7 +69,7 @@ class Client:
             
             message_length = int(header)
             message = self.client.recv(message_length).decode(FORMAT).strip()
-            
+
             if message == DISCONNECT_MESSAGE:
                 self.disconnect()
                 return
@@ -74,7 +77,7 @@ class Client:
                 self.send(PONG_MESSAGE)
                 return
             elif message == CLEAR_MESSAGE:
-                os.system(clear)
+                clear_console()
                 return
 
             self.process(message)
@@ -97,6 +100,9 @@ class Client:
         
         recvWait = Thread(target = self.__recieveLoop, args = ())
         recvWait.start()
+    
+def clear_console():
+    os.system(clear)
 
 if __name__ == '__main__':
     client = Client()

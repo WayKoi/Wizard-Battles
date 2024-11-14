@@ -1,38 +1,95 @@
-from client import Client
-import json
+from client import Client, CLEAR_MESSAGE, clear_console
+import json, time
+
+BLACK   = '\u001b[30m'
+RED     = '\u001b[31m'
+GREEN   = '\u001b[32m'
+YELLOW  = '\u001b[33m'
+BLUE    = '\u001b[34m'
+MAGENTA = '\u001b[35m'
+CYAN    = '\u001b[36m'
+WHITE   = '\u001b[37m'
+
+BOLD        = '\033[1m'
+DARK        = '\033[2m'
+ITALIC      = '\033[3m'
+UNDERLINE   = '\033[4m'
+BLINK       = '\033[5m'
+SWAP        = '\033[7m'
+STRIKE      = '\033[9m'
+
+RESET = '\u001b[0m'
 
 class Game(Client):
+    def __init__(self):
+        super().__init__()
+        self.frozen = False
+
     def process(self, message):
         data = json.loads(message)
+
+        while self.frozen:
+            time.sleep(0.5)
         
         print()
-        for message in data['messages']:
+        if 'messages' in data:
+            for message in data['messages']:
+                self.interpret(message)
+
+        if not ('prompts' in data):
+            return
+        
+        response = []
+        for prompt in data['prompts']:
+            response.append(self.prompt(prompt))
+        
+        self.send(
+            json.dumps({
+                'response': response
+            })
+        )
+    
+    def prompt(self, prompt):
+        if not ('input' in prompt):
+            return ''
+
+        if 'text' in prompt:
+            for text in prompt['text']:
+                self.interpret(text)
+
+        choice = ''
+        if prompt['input'] == 'string':
+            choice = input('> ')
+            while choice == '':
+                choice = input('> ')
+
+        elif prompt['input'] == 'choice':
+            options = prompt['choices']
+            for i in range(len(options)):
+                options[i] = options[i].lower()
+
+            choice = input('> ')
+            while not(choice.lower() in options):
+                print('Choices are ', end = '')
+                for option in prompt['choices']:
+                    print(f'"{option}" ', end = '')
+                print()
+                
+                choice = input('> ')
+        
+        return choice
+    
+    def interpret(self, message):
+        if message == CLEAR_MESSAGE:
+            clear_console()
+        elif message == '!FREEZE':
+            self.frozen = True
+            input(BOLD + BLACK + 'press enter to continue' + RESET)
+            self.frozen = False
+        else:
             print(message)
 
-        if not ('input' in data):
-            return
-
-        if data['input'] == 'string':
-            string = ''
-            
-            while string == '':
-                string = input('> ')
-            
-            self.send(string)
-        elif data['input'] == 'choice':
-            valid = False
-
-            while not valid:
-                string = input('> ')
-                
-                for choice in data['choices']:
-                    if choice == string:
-                        self.send(string)
-                        valid = True
-                
-                if not valid:
-                    print('That is not a valid option')
-
 game = Game()
+clear_console()
 game.connect()
-game.send('ready')
+game.send('{"response": ["here"]}')

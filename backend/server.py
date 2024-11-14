@@ -5,6 +5,7 @@ import os
 clear = 'cls' if os.name == 'nt' else 'clear'
 
 import items
+from items import Spell
 
 from player import Client, Player
 
@@ -12,8 +13,10 @@ from battle import Battle
 
 import message as ms
 from message import out
-from message import DISCONNECT_MESSAGE, PONG_MESSAGE, PING_MESSAGE, CLEAR_MESSAGE
-from message import QUEUE_MESSAGE, COMM_MESSAGE, NAME_PROMPT
+from message import CONNECTED, DISCONNECT_MESSAGE, PONG_MESSAGE, PING_MESSAGE, CLEAR_MESSAGE
+from message import QUEUE_MESSAGE, COMM_MESSAGE, NAME_PROMPT, POTION_ARMOUR_MESSAGE
+
+from constant import START_STATE, INIT_NAME, BUILD_T1, BUILD_T2, BUILD_T3, BUILD_PA, BATTLE_CHOOSE, BATTLE_QUEUE, BATTLE_WAIT
 
 from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
 
@@ -55,13 +58,15 @@ def receive(socket: socket.socket):
     length = int(header)
     message = socket.recv(length).decode(FORMAT).strip()
     
+    out(ms.DEBUG, f'Recieved : {message}')
+
     if message == DISCONNECT_MESSAGE:
         disconnect(socket)
     elif message == PONG_MESSAGE:
         out(ms.PING_PONG, f'{get_name(socket)} Ponged')
         pings.remove(socket)
     else:
-        pass # TODO handle message
+        handle_message(players[clients[socket]], message)
 
 def send(socket: socket.socket, message: str) -> bool:
     try:
@@ -91,6 +96,8 @@ def send(socket: socket.socket, message: str) -> bool:
 def disconnect(socket: socket.socket):
     name = get_name(socket)
 
+    send(socket, DISCONNECT_MESSAGE)
+
     socket.detach()
     del players[clients[socket]]
     del clients[socket]
@@ -114,7 +121,8 @@ def active_clients():
     print(ms.CONNECTION, f'{len(sockets)} active clients')
 
 def disconnect_all():
-    for sock in sockets:
+    copy = sockets.copy()
+    for sock in copy:
         disconnect(sock)
 
 # -------------------------------------------
@@ -192,6 +200,130 @@ def ping_pong():
                 if success:
                     pings.append(sock)
 
+# ------------------------------
+# Message handling 
+# ------------------------------
+
+def handle_message(player: Player, message: str):
+    data = json.loads(message)
+    extra = []
+
+    # check players state and process message accordingly
+    if player.state == START_STATE:
+        player.state = INIT_NAME
+        send(player.client.socket, CONNECTED)
+
+    elif player.state == INIT_NAME:
+        player.client.name = data['response'][0]
+        
+        index = min(int(data['response'][1]), len(VISUALS) - 1)
+        index = max(index, 0)
+        player.visual = VISUALS[index]
+    
+        player.state = BUILD_T1
+
+        out(ms.CONNECTION, f"Renamed {player.client.address} -> '{player.client.name}' -> {player.visual}")
+    elif player.state == BUILD_T1:
+        player.state = BUILD_T2
+
+        spell = items.get_spell(data['response'][0])
+        if spell == None:
+            player.state = BUILD_T1
+        
+        give_spell(player, spell)
+    elif player.state == BUILD_T2:
+        player.state = BUILD_T3
+
+        spell = items.get_spell(data['response'][0])
+        if spell == None:
+            player.state = BUILD_T2
+        
+        give_spell(player, spell)
+    elif player.state == BUILD_T3:
+        player.state = BUILD_PA
+
+        spell = items.get_spell(data['response'][0])
+        if spell == None:
+            player.state = BUILD_T3
+
+        give_spell(player, spell)
+    elif player.state == BUILD_PA:
+        player.state = BATTLE_QUEUE
+
+        choice = data['response'][0]
+
+        if choice == 'potion':
+            out(ms.CHOICE, f'{player.client.get_name()} obtained a potion')
+            pass
+        elif choice == 'armour':
+            out(ms.CHOICE, f'{player.client.get_name()} obtained armour')
+            pass
+
+        out(ms.QUEUE, f'{player.client.get_name()} enters the queue')
+
+    # send proper message
+
+    if player.state == INIT_NAME:
+        send(player.client.socket, NAME_PROMPT)
+    elif player.state == BUILD_T1:
+        send(player.client.socket, items.create_message(1))
+    elif player.state == BUILD_T2:
+        send(player.client.socket, items.create_message(2))
+    elif player.state == BUILD_T3:
+        send(player.client.socket, items.create_message(3))
+    elif player.state == BUILD_PA:
+        send(player.client.socket, POTION_ARMOUR_MESSAGE)
+    elif player.state == BATTLE_QUEUE:
+        send(player.client.socket, QUEUE_MESSAGE)
+        check_queue()
+
+def give_spell(player: Player, spell: Spell):
+    player.spells.append(spell)
+    
+    send(player.client.socket, json.dumps({
+        'messages': [
+            f'{player.client.get_name()} got a {spell.display_name()} spell',
+            '!FREEZE'
+        ]
+    }))
+
+    out(ms.CHOICE, f'{player.client.get_name()} got {spell.display_name()}')
+
+def check_queue():
+    waiting = []
+    for socket in sockets:
+        player = players[clients[socket]]
+
+        if player.state == BATTLE_QUEUE:
+            waiting.append(player)
+    
+    while len(waiting) >= 2:
+        a = waiting.pop(0)
+        b = waiting.pop(0)
+        battle = Battle(a, b)
+        battles.append(battle)
+
+        out(ms.QUEUE, f'Matched {a.client.get_name()} and {b.client.get_name()}')
+
+        send(a.client.socket, json.dumps({
+            'messages': [
+                f'Matched with {b.client.get_name()}',
+                '!FREEZE'
+            ]
+        }))
+
+        send(b.client.socket, json.dumps({
+            'messages': [
+                f'Matched with {a.client.get_name()}',
+                '!FREEZE'
+            ]
+        }))
+
+        handle_battle(battle)
+
+def handle_battle(battle: Battle):
+    pass
+
 # -----------------------
 # Main
 # -----------------------
@@ -201,7 +333,10 @@ def start():
     out(ms.SERVER, f'Server started on {LOCAL_IP}')
 
 if __name__ == '__main__':
+    os.system(clear)
+
     start()
+    ms.debug = False
 
     handler = Thread(target = thread_handler)
     handler.start()
@@ -217,6 +352,7 @@ if __name__ == '__main__':
             out(ms.SERVER, f'Server running on {LOCAL_IP}')
         
     handler.join()
+    server.detach()
 
     out(ms.SERVER, 'Shut Down Successful')
     

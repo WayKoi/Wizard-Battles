@@ -28,6 +28,7 @@ Ask for Potion or Armour
 Ask for Potion or Armour
 '''
 
+START_STATE = -1
 INIT_NAME = 0
 BUILD_T1 = 1
 BUILD_T2 = 2

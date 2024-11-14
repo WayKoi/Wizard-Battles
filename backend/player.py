@@ -1,5 +1,7 @@
 from constant import VISUALS
 
+from constant import START_STATE
+
 class Client:
     def __init__(self, socket, address) -> None:
         self.socket = socket
@@ -18,7 +20,7 @@ class Client:
 class Player:
     def __init__(self, client: Client) -> None:
         self.client = client
-        self.state = GAME_INIT
+        self.state = START_STATE
         self.health = 6
         self.visual = VISUALS[0]
         
