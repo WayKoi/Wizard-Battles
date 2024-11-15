@@ -16,11 +16,11 @@ from message import out
 from message import CONNECTED, DISCONNECT_MESSAGE, PONG_MESSAGE, PING_MESSAGE, CLEAR_MESSAGE
 from message import QUEUE_MESSAGE, COMM_MESSAGE, NAME_PROMPT, POTION_ARMOUR_MESSAGE
 
-from constant import START_STATE, INIT_NAME, BUILD_T1, BUILD_T2, BUILD_T3, BUILD_PA, BATTLE_CHOOSE, BATTLE_QUEUE, BATTLE_WAIT
+from constant import START_STATE, INIT_NAME, BUILD_T1, BUILD_T2, BUILD_T3, BUILD_PA, BATTLE_CHOOSE, BATTLE_QUEUE, BATTLE_WAIT, BATTLE_PROMPT
 
 from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESET
 
-from constant import VISUALS, POS_NAMES
+from constant import VISUALS, MOVE_NAMES, UP, DOWN, LEFT, RIGHT
 
 from constant import DAMAGING, HEALING, BUFF
 
@@ -262,17 +262,60 @@ def handle_message(player: Player, message: str):
             pass
 
         out(ms.QUEUE, f'{player.client.get_name()} enters the queue')
+    elif player.state == BATTLE_PROMPT:
+        battle = get_battle(player.client.socket)
+
+        if battle == None:
+            out(ms.ERROR, f'Player {player.client.get_name()} is not part of any battle')
+            return
+
+        plan = battle.players[player.client.socket].plan
+        res = data['response'][0]
+
+        if res == 'up':
+            plan.aim = UP
+        elif res == 'down':
+            plan.aim = DOWN
+        elif res == 'left':
+            plan.aim = LEFT
+        elif res == 'right':
+            plan.aim = RIGHT
+        elif res.isdigit():
+            plan.aim = int(res) - 1
+
+        player.state = BATTLE_CHOOSE
+
+    elif player.state == BATTLE_CHOOSE:
+        battle = get_battle(player.client.socket)
+        if battle == None:
+            return
+        
+        prompt = battle.plan_turn(player.client.socket, data)
+
+        if prompt != None:
+            player.state = BATTLE_PROMPT
+
+            send(player.client.socket, json.dumps({
+                'prompts': [
+                    prompt
+                ]
+            }))
+
+        check_battle(battle)
 
     # send proper message
 
+    handle_client(player)
+    
+def handle_client(player: Player):
     if player.state == INIT_NAME:
         send(player.client.socket, NAME_PROMPT)
     elif player.state == BUILD_T1:
-        send(player.client.socket, items.create_message(1))
+        send(player.client.socket, items.create_message(1, 3))
     elif player.state == BUILD_T2:
-        send(player.client.socket, items.create_message(2))
+        send(player.client.socket, items.create_message(2, 2))
     elif player.state == BUILD_T3:
-        send(player.client.socket, items.create_message(3))
+        send(player.client.socket, items.create_message(3, 2))
     elif player.state == BUILD_PA:
         send(player.client.socket, POTION_ARMOUR_MESSAGE)
     elif player.state == BATTLE_QUEUE:
@@ -280,8 +323,22 @@ def handle_message(player: Player, message: str):
         check_queue()
     elif player.state == BATTLE_CHOOSE:
         send(player.client.socket, COMM_MESSAGE)
+
         player.state = BATTLE_WAIT
-        check_battle()
+        battle = get_battle(player.client.socket)
+        
+        if battle == None:
+            out(ms.ERROR, f'Player {player.client.get_name()} is not part of any battle')
+            return
+        
+        check_battle(battle)
+
+def get_battle(socket: socket.socket) -> Battle:
+    for battle in battles:
+        if battle.part_of(socket):
+            return battle
+    
+    return None
 
 def give_spell(player: Player, spell: Spell):
     player.spells.append(spell)
@@ -337,7 +394,24 @@ def send_battle(battle: Battle):
     send(battle.b.player.client.socket, battle.get_message(B))
 
 def check_battle(battle: Battle):
-    pass
+    if battle.a.player.state != BATTLE_WAIT or battle.b.player.state != BATTLE_WAIT:
+        return
+    
+    messages = battle.play_turns()
+    mess = json.dumps({
+        'messages': messages
+    })
+
+    send(battle.a.player.client.socket, mess)
+    send(battle.b.player.client.socket, mess)
+
+    if battle.finished:
+        battles.remove(battle)
+
+        handle_client(battle.a.player)
+        handle_client(battle.b.player)
+    else:
+        send_battle(battle)
 
 # -----------------------
 # Main

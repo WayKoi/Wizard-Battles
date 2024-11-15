@@ -1,20 +1,25 @@
 from player import Player
-import socket, json
+import socket, json, time
 
 from items import Spell
 
-from constant import RED, GREEN, RESET, BOLD, BLACK
-from constant import UP, LEFT, DOWN, RIGHT
+from constant import RED, GREEN, RESET, BOLD, BLACK, YELLOW, UNDERLINE
+from constant import UP, LEFT, DOWN, RIGHT, MOVE_NAMES
+
+from constant import BATTLE_CHOOSE, START_STATE, BATTLE_QUEUE, BATTLE_PROMPT
+
+from items import RELATIVE, ROW, COLUMN, RELATIVE_SYMMETRIC, STATIC
 
 A = 1
 B = 2
 
 class Plan:
-    def __init__(self) -> None:
-        self.spell = None
+    def __init__(self, current) -> None:
+        self.spell: SWrap = None
         self.potion = None
-        self.aim = None
-        self.move = None
+        self.aim: int = None
+        self.move: int = None
+        self.time = current
 
 class SWrap:
     def __init__(self, spell: Spell) -> None:
@@ -46,7 +51,7 @@ class PWrap:
         self.position = (0, 0)
     
     def display_health(self):
-        build = RED
+        build = RED if self.health > 0 else BOLD + BLACK
         
         for i in range(self.player.health):
             if self.health == i:
@@ -60,7 +65,7 @@ class PWrap:
         name = name.lower()
 
         for spell in self.spells:
-            if spell.name.lower() == name:
+            if spell.spell.name.lower() == name:
                 return spell
             
         return None
@@ -91,6 +96,8 @@ class Battle:
             a.client.socket : self.a,
             b.client.socket : self.b
         }
+
+        self.finished = False
     
     # just checks if that socket is part of this battle
     def part_of(self, socket: socket.socket) -> bool:
@@ -103,10 +110,12 @@ class Battle:
         return self.players[socket]
     
     def display_board(self, perspective):
-        build = ''
+        build = BOLD + BLACK + '    1    2    3    4    5  \n' +  RESET
         empty = '  •  '
         
         for y in range(5):
+            build += f'{BOLD + BLACK}{y + 1}{RESET} '
+
             for x in range(5):
                 if self.a.position == (x, y):
                     if perspective == A:
@@ -150,17 +159,144 @@ class Battle:
             
         return build
 
+    def play_turns(self):
+        messages = []
+        if self.a.plan.time < self.a.plan.time:
+            messages.extend(self.__play_turn(self.a))
+            messages.append('')
+
+            messages.extend(self.__play_turn(self.b))
+            messages.append('')
+        else:
+            messages.extend(self.__play_turn(self.a))
+            messages.append('')
+            
+            messages.extend(self.__play_turn(self.b))
+            messages.append('')
+
+        self.finished = True
+        if self.a.health <= 0 and self.b.health <= 0:
+            self.a.player.state = START_STATE
+            self.b.player.state = START_STATE
+
+            messages.append(f'{RED}{self.a.name} {self.a.visual} has fallen!{RESET}')
+            messages.append(f'{RED}{self.b.name} {self.b.visual} has fallen!{RESET}')
+
+        elif self.a.health <= 0:
+            self.a.player.state = START_STATE
+            self.b.player.state = BATTLE_QUEUE
+
+            messages.append(f'{RED}{self.a.name} {self.a.visual} has fallen!{RESET}')
+            messages.append(f'{GREEN + BOLD + UNDERLINE}{self.b.name} {self.b.visual} is the victor!{RESET}')
+
+        elif self.b.health <= 0:
+            self.a.player.state = BATTLE_QUEUE
+            self.b.player.state = START_STATE
+
+            messages.append(f'{RED}{self.b.name} {self.b.visual} has fallen!{RESET}')  
+            messages.append(f'{GREEN + BOLD + UNDERLINE}{self.a.name} {self.a.visual} is the victor!{RESET}')  
+
+        else:
+            self.a.plan = None
+            self.b.plan = None
+            self.a.player.state = BATTLE_CHOOSE
+            self.b.player.state = BATTLE_CHOOSE
+
+            messages.append(f'{YELLOW}The battle continues{RESET}')
+            self.finished = False
+        
+        messages.append('!FREEZE')
+        return messages
+        
+    def __play_turn(self, player: PWrap):
+        plan = player.plan
+
+        messages = []
+
+        if plan.spell != None:
+            messages.extend(self.__play_spell(player, plan.spell))
+        elif plan.potion != None:
+            pass
+        elif plan.move != None:
+            messages.extend(self.__move(player, plan.move))
+        else:
+            messages.append(f'{player.name} passes their turn')
+        
+        return messages
+    
+    def __play_spell(self, player: PWrap, spell: SWrap):
+        messages = [spell.spell.get_cast_print(player.name)]
+        at = player.plan.spell.spell.attack_type
+        pos = player.position if at == RELATIVE or at == RELATIVE_SYMMETRIC else (player.plan.aim, player.plan.aim)
+        move = player.plan.move if player.plan.move != None else UP
+
+        spots = spell.spell.get_spots(pos, move)
+
+        hit = False
+        if self.a.position in spots:
+            messages.append(f'{self.a.name} is hit!')
+            hitprint = f'{self.a.display_health()} -> '
+            
+            self.a.health -= spell.spell.damage
+            hitprint += self.a.display_health()
+
+            messages.append(hitprint)
+
+            hit = True
+        
+        if self.b.position in spots:
+            messages.append(f'{self.b.name} is hit!')
+            hitprint = f'{self.b.display_health()} -> '
+            
+            self.b.health -= spell.spell.damage
+            hitprint += self.b.display_health()
+
+            messages.append(hitprint)
+
+            hit = True
+        
+        if not hit:
+            messages.append(f'{spell.spell.display_name()} missed everyone')
+        
+        spell.cooldown = spell.spell.cooldown
+
+        return messages
+    
+    def __move(self, player: PWrap, move: int):
+        new = (player.position[0], player.position[1])
+
+        opp = self.a
+        if self.a == player:
+            opp = self.b
+
+        if move == UP:
+            new = (new[0], new[1] - 1)
+        elif move == DOWN:
+            new = (new[0], new[0] + 1)
+        elif move == LEFT:
+            new = (new[0] - 1, new[1])
+        elif move == RIGHT:
+            new = (new[0] + 1, new[1])
+        
+        if new == opp.position:
+            return [f'{player.name} attempted to move {MOVE_NAMES[move]}, but was blocked by {opp.name}']
+        
+        player.position = new
+
+        return [f'{player.name} moves {MOVE_NAMES[move]}']
+
     def plan_turn(self, socket: socket.socket, data):
         # possible plans
 
         '''
         {
             'response': [
-                'spell / potion / pass / up / left / down / right',
-                'direction'
+                'spell / potion / pass / up / left / down / right'
             ]
         }
         '''
+
+        prompt = None
 
         start = data['response'][0]
 
@@ -168,22 +304,32 @@ class Battle:
         spell = player.get_spell(start)
         potion = player.get_potion(start)
 
-        player.plan = Plan()
+        player.plan = Plan(time.time())
 
         if spell != None:
             direction = UP
-            if len(data['response']) > 1:
-                point = data['response'][1]
-                
-                if point == 'down':
-                    direction = DOWN
-                elif point == 'right':
-                    direction = RIGHT
-                elif point == 'left':
-                    direction = LEFT
 
             player.plan.spell = spell
             player.plan.aim = direction
+
+            if spell.spell.attack_type == RELATIVE:
+                prompt = {
+                    'text': ['Which direction would you like to cast the spell in?'],
+                    'input': 'choice',
+                    'choices': ['up', 'down', 'left', 'right']
+                }
+            elif spell.spell.attack_type == ROW:
+                prompt = {
+                    'text': ['Which row would you like to attack?'],
+                    'input': 'choice',
+                    'choices': ['1', '2', '3', '4', '5']
+                }
+            elif spell.spell.attack_type == COLUMN:
+                prompt = {
+                    'text': ['Which column would you like to attack?'],
+                    'input': 'choice',
+                    'choices': ['1', '2', '3', '4', '5']
+                }
 
         elif potion != None:
             pass
@@ -198,8 +344,22 @@ class Battle:
 
         elif start == 'right':
             player.plan.move = RIGHT
+        
+        return prompt
+
+    def get_perspective(self, socket : socket.socket):
+        if self.players[socket] == self.a:
+            return A
+        
+        return B
 
     def get_message(self, perspective):
+        if perspective is socket.socket:
+            if perspective == self.a.player.client.socket:
+                perspective = A
+            else:
+                perspective = B
+
         board = self.display_battle(perspective)
 
         messages = ['!CLEAR']

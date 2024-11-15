@@ -35,9 +35,11 @@ BUILD_T2 = 2
 BUILD_T3 = 3
 BUILD_PA = 4 # potion or armour
 
-BATTLE_QUEUE = 5
-BATTLE_CHOOSE = 6
-BATTLE_WAIT = 7
+BATTLE_PROMPT = 5
+BATTLE_QUEUE = 6
+BATTLE_CHOOSE = 7
+BATTLE_TARGET = 8
+BATTLE_WAIT = 9
 
 
 # positions
@@ -47,10 +49,11 @@ LEFT = 1
 DOWN = 2
 RIGHT = 3
 
-POS_NAMES = [
-    'left',
-    'middle',
-    'right'
+MOVE_NAMES = [
+    'Up',
+    'Left',
+    'Down',
+    'Right'
 ]
 
 # spell / potion types

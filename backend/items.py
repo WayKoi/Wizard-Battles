@@ -275,9 +275,10 @@ def get_tier(tier):
 
 def get_tier_amount(tier, amount):
     found = get_tier(tier)
-    return random.choices(found, k = amount)
+    random.shuffle(found)
+    return found[0:min(amount, len(found))]
     
-def create_message(spell_tier):
+def create_message(spell_tier, amount = 100):
     start = {
         'messages': [
             '!CLEAR',
@@ -291,7 +292,7 @@ def create_message(spell_tier):
         ]
     }
 
-    spells = get_tier(spell_tier)
+    spells = get_tier_amount(spell_tier, amount)
 
     for spell in spells:
         start['messages'].append(spell.display_spell())
