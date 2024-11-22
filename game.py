@@ -36,18 +36,16 @@ class Game(Client):
             for message in data['messages']:
                 self.interpret(message)
 
-        if not ('prompts' in data):
-            return
-        
-        response = []
-        for prompt in data['prompts']:
-            response.append(self.prompt(prompt))
-        
-        self.send(
-            json.dumps({
-                'response': response
-            })
-        )
+        if 'prompts' in data:
+            response = []
+            for prompt in data['prompts']:
+                response.append(self.prompt(prompt))
+            
+            self.send(
+                json.dumps({
+                    'response': response
+                })
+            )
     
     def prompt(self, prompt):
         if not ('input' in prompt):
@@ -64,17 +62,31 @@ class Game(Client):
                 choice = input('> ')
 
         elif prompt['input'] == 'choice':
-            options = prompt['choices']
-            for i in range(len(options)):
-                options[i] = options[i].lower()
+            choices = prompt['choices']
+            for i in range(len(choices)):
+                choices[i] = choices[i].lower()
+            
+            options = {} 
+            if 'options' in prompt:
+                options = prompt['options']
 
             choice = input('> ')
-            while not(choice.lower() in options):
-                print('Choices are ', end = '')
-                for option in prompt['choices']:
-                    print(f'"{option}" ', end = '')
-                print()
-                
+            while not(choice.lower() in choices):
+                if choice.lower() in options:
+                    for line in options[choice.lower()]:
+                        self.interpret(line)
+
+                else:
+                    print('Choices are ', end = '')
+
+                    for option in prompt['choices']:
+                        print(f'"{option}" ', end = '')
+
+                    for option in options:
+                        print(f'"{option}" ', end='')
+
+                    print()
+                    
                 choice = input('> ')
         
         return choice

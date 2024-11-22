@@ -17,10 +17,10 @@ PING_PONG = DARK + GREEN + '[PING-PONG]' + RESET
 DEBUG = RED + BLINK + '[DEBUG]' + RESET
 ERROR = RED + BLINK + SWAP + '[ERROR]' + RESET
 
-debug = True
+enable_debug = True
 
 def out(messageType: str, content: str) -> str:
-    if (messageType == DEBUG or messageType == PING_PONG) and not debug:
+    if (messageType == DEBUG or messageType == PING_PONG) and not enable_debug:
         return
     
     print(messageType, content)

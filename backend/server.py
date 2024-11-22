@@ -218,7 +218,7 @@ def handle_message(player: Player, message: str):
     elif player.state == INIT_NAME:
         player.client.name = data['response'][0]
         
-        index = min(int(data['response'][1]), len(VISUALS) - 1)
+        index = min(int(data['response'][1]) - 1, len(VISUALS) - 1)
         index = max(index, 0)
         player.visual = VISUALS[index]
     
@@ -425,7 +425,7 @@ if __name__ == '__main__':
     os.system(clear)
 
     start()
-    ms.debug = True
+    ms.enable_debug = False
 
     handler = Thread(target = thread_handler)
     handler.start()

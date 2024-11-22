@@ -4,6 +4,10 @@ from constant import BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE, RESE
 from constant import DARK, BOLD
 from constant import DAMAGING, HEALING, BUFF
 
+import os
+
+clear = 'cls' if os.name == 'nt' else 'clear'
+
 # attack types
 
 RELATIVE = 0
@@ -250,7 +254,7 @@ spells = [
         '',
         'Forces an',
         3,
-        RELATIVE,
+        RELATIVE_SYMMETRIC,
         [
             (0, 1), (1, 0), (-1, 0), (0, -1), (1, 1), 
             (-1, 1), (1, -1), (-1, -1), (0, -2), (0, 2), 
@@ -307,8 +311,20 @@ def get_spell(name):
     
     return None
 
+class Potion:
+    pass
+
+
+potions: list[Potion] = []
+
 if __name__ == '__main__':
     for spell in spells:
         print(spell.display_spell())
+    
+    input('Press enter to see potions')
+    os.system(clear)
+
+    for potion in potions:
+        print()
 
     

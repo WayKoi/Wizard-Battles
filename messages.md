@@ -13,7 +13,10 @@
             "choices": [
                 "choice",
                 "other-choice"
-            ]
+            ],
+            "options": {
+                "handle": ["response", "second response"]
+            }
         },
         {
             "text": ["info", "other question?"],

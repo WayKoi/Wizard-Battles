@@ -6,9 +6,11 @@ from items import Spell
 from constant import RED, GREEN, RESET, BOLD, BLACK, YELLOW, UNDERLINE
 from constant import UP, LEFT, DOWN, RIGHT, MOVE_NAMES
 
-from constant import BATTLE_CHOOSE, START_STATE, BATTLE_QUEUE, BATTLE_PROMPT
+from constant import BATTLE_CHOOSE, START_STATE, BATTLE_QUEUE, BATTLE_PROMPT, INIT_NAME
 
 from items import RELATIVE, ROW, COLUMN, RELATIVE_SYMMETRIC, STATIC
+
+import message as ms
 
 A = 1
 B = 2
@@ -160,8 +162,16 @@ class Battle:
         return build
 
     def play_turns(self):
+        for spell in self.a.spells:
+            if spell.cooldown > 0:
+                spell.cooldown -= 1
+        
+        for spell in self.b.spells:
+            if spell.cooldown > 0:
+                spell.cooldown -= 1
+
         messages = []
-        if self.a.plan.time < self.a.plan.time:
+        if self.a.plan.time < self.b.plan.time:
             messages.extend(self.__play_turn(self.a))
             messages.append('')
 
@@ -176,22 +186,34 @@ class Battle:
 
         self.finished = True
         if self.a.health <= 0 and self.b.health <= 0:
-            self.a.player.state = START_STATE
-            self.b.player.state = START_STATE
+            self.a.player.state = INIT_NAME
+            self.b.player.state = INIT_NAME
+
+            self.a.player.spells.clear()
+            self.a.player.potions.clear()
+            
+            self.b.player.spells.clear()
+            self.b.player.potions.clear()
 
             messages.append(f'{RED}{self.a.name} {self.a.visual} has fallen!{RESET}')
             messages.append(f'{RED}{self.b.name} {self.b.visual} has fallen!{RESET}')
 
         elif self.a.health <= 0:
-            self.a.player.state = START_STATE
+            self.a.player.state = INIT_NAME
             self.b.player.state = BATTLE_QUEUE
+
+            self.a.player.spells.clear()
+            self.a.player.potions.clear()
 
             messages.append(f'{RED}{self.a.name} {self.a.visual} has fallen!{RESET}')
             messages.append(f'{GREEN + BOLD + UNDERLINE}{self.b.name} {self.b.visual} is the victor!{RESET}')
 
         elif self.b.health <= 0:
             self.a.player.state = BATTLE_QUEUE
-            self.b.player.state = START_STATE
+            self.b.player.state = INIT_NAME
+
+            self.b.player.spells.clear()
+            self.b.player.potions.clear()
 
             messages.append(f'{RED}{self.b.name} {self.b.visual} has fallen!{RESET}')  
             messages.append(f'{GREEN + BOLD + UNDERLINE}{self.a.name} {self.a.visual} is the victor!{RESET}')  
@@ -215,12 +237,15 @@ class Battle:
 
         if plan.spell != None:
             messages.extend(self.__play_spell(player, plan.spell))
+            ms.out(ms.BATTLE, f'{player.name} casts {plan.spell.spell.display_name()}')
         elif plan.potion != None:
             pass
         elif plan.move != None:
             messages.extend(self.__move(player, plan.move))
+            ms.out(ms.BATTLE, f'{player.name} moves {MOVE_NAMES[plan.move]}')
         else:
             messages.append(f'{player.name} passes their turn')
+            ms.out(ms.BATTLE, f'{player.name} passes')
         
         return messages
     
@@ -228,9 +253,9 @@ class Battle:
         messages = [spell.spell.get_cast_print(player.name)]
         at = player.plan.spell.spell.attack_type
         pos = player.position if at == RELATIVE or at == RELATIVE_SYMMETRIC else (player.plan.aim, player.plan.aim)
-        move = player.plan.move if player.plan.move != None else UP
+        aim = player.plan.aim if player.plan.aim != None else UP
 
-        spots = spell.spell.get_spots(pos, move)
+        spots = spell.spell.get_spots(pos, aim)
 
         hit = False
         if self.a.position in spots:
@@ -241,6 +266,8 @@ class Battle:
             hitprint += self.a.display_health()
 
             messages.append(hitprint)
+            
+            ms.out(ms.BATTLE, f'{self.a.name} {hitprint}')
 
             hit = True
         
@@ -252,6 +279,8 @@ class Battle:
             hitprint += self.b.display_health()
 
             messages.append(hitprint)
+
+            ms.out(ms.BATTLE, f'{self.b.name} {hitprint}')
 
             hit = True
         
@@ -272,13 +301,14 @@ class Battle:
         if move == UP:
             new = (new[0], new[1] - 1)
         elif move == DOWN:
-            new = (new[0], new[0] + 1)
+            new = (new[0], new[1] + 1)
         elif move == LEFT:
             new = (new[0] - 1, new[1])
         elif move == RIGHT:
             new = (new[0] + 1, new[1])
         
         if new == opp.position:
+            ms.out(ms.BATTLE, f'{player.name} can\'t move')
             return [f'{player.name} attempted to move {MOVE_NAMES[move]}, but was blocked by {opp.name}']
         
         player.position = new
@@ -371,6 +401,8 @@ class Battle:
             'pass'
         ]
 
+        options = {}
+
         player = self.a
         if perspective == B:
             player = self.b
@@ -379,6 +411,9 @@ class Battle:
         # add spell options
         for spell in player.spells:
             message = '  '
+
+            options['help ' + spell.spell.name.lower()] = spell.spell.display_spell().split('\n')
+
             if spell.cooldown == 0:
                 choices.append(spell.spell.name.lower())
                 message += spell.spell.display_name()
@@ -418,7 +453,8 @@ class Battle:
             'prompts': [
                 {
                     'input': 'choice',
-                    'choices': choices
+                    'choices': choices,
+                    'options': options
                 }
             ]
         })
