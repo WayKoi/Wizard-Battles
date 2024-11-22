@@ -1,7 +1,7 @@
 from player import Player
 import socket, json, time
 
-from items import Spell
+from items import Spell, Potion
 
 from constant import RED, GREEN, RESET, BOLD, BLACK, YELLOW, UNDERLINE
 from constant import UP, LEFT, DOWN, RIGHT, MOVE_NAMES
@@ -15,13 +15,32 @@ import message as ms
 A = 1
 B = 2
 
+PASS = -1
+MOVEMENT = 0
+POTION = 1
+ATTACK = 2
+
 class Plan:
     def __init__(self, current) -> None:
         self.spell: SWrap = None
-        self.potion = None
-        self.aim: int = None
+        self.potion: PoWrap = None
+        self.aim: int = UP
         self.move: int = None
+        self.type = PASS
         self.time = current
+
+class PoWrap:
+    def __init__(self, potion: Potion):
+        self.potion = potion
+        self.used = False
+
+def wrap_potions(potions: list[Potion]):
+    wrapped = []
+    
+    for potion in potions:
+        wrapped.append(PoWrap(potion))
+        
+    return wrapped
 
 class SWrap:
     def __init__(self, spell: Spell) -> None:
@@ -45,7 +64,7 @@ class PWrap:
         self.health = player.health
         
         self.spells: list[SWrap] = wrap_spells(player.spells)
-        self.potions = []
+        self.potions: list[PoWrap] = wrap_potions(player.potions)
         self.status  = []
 
         self.plan: Plan = None
@@ -55,9 +74,13 @@ class PWrap:
     def display_health(self):
         build = RED if self.health > 0 else BOLD + BLACK
         
-        for i in range(self.player.health):
+        amt = max(self.player.health, self.health)
+        for i in range(amt):
             if self.health == i:
                 build += BOLD + BLACK
+            
+            if i >= self.player.health:
+                build += YELLOW
             
             build += '♥'
         
@@ -76,7 +99,7 @@ class PWrap:
         name = name.lower()
 
         for potion in self.potions:
-            if potion.name.lower() == name:
+            if potion.potion.name.lower() == name:
                 return potion
             
         return None
@@ -169,19 +192,27 @@ class Battle:
         for spell in self.b.spells:
             if spell.cooldown > 0:
                 spell.cooldown -= 1
+    
+        afirst = True
 
         messages = []
-        if self.a.plan.time < self.b.plan.time:
+        if self.a.plan.type == self.b.plan.type:
+            if self.a.plan.time > self.b.plan.time:
+                afirst = False
+        elif self.a.plan.type > self.b.plan.type:
+            afirst = False
+        
+        if afirst:
             messages.extend(self.__play_turn(self.a))
             messages.append('')
 
             messages.extend(self.__play_turn(self.b))
             messages.append('')
         else:
-            messages.extend(self.__play_turn(self.a))
+            messages.extend(self.__play_turn(self.b))
             messages.append('')
             
-            messages.extend(self.__play_turn(self.b))
+            messages.extend(self.__play_turn(self.a))
             messages.append('')
 
         self.finished = True
@@ -238,16 +269,35 @@ class Battle:
         if plan.spell != None:
             messages.extend(self.__play_spell(player, plan.spell))
             ms.out(ms.BATTLE, f'{player.name} casts {plan.spell.spell.display_name()}')
+            messages.extend(self.board_spell(player, plan.spell, plan.aim))
+            
         elif plan.potion != None:
-            pass
+            messages.extend(self.__play_potion(player, plan.potion))
+            ms.out(ms.BATTLE, f'{player.name} drinks {plan.potion.potion.display_name()}')
+            
         elif plan.move != None:
             messages.extend(self.__move(player, plan.move))
             ms.out(ms.BATTLE, f'{player.name} moves {MOVE_NAMES[plan.move]}')
+            messages.extend(self.display_board(A if player == self.a else B).split('\n'))
+        
         else:
             messages.append(f'{player.name} passes their turn')
             ms.out(ms.BATTLE, f'{player.name} passes')
         
         return messages
+    
+    def board_spell(self, player: PWrap, spell: SWrap, direction: int) -> list[str]:
+        board = self.display_board(A if player is self.a else B).split('\n')
+        
+        at = spell.spell.attack_type
+        pos = player.position if at == RELATIVE or at == RELATIVE_SYMMETRIC else (player.plan.aim, player.plan.aim)
+        spell_display = spell.spell.display_spell(pos, direction).split('\n')
+        
+        for i in range(len(spell_display)):
+            board[i] += '\t' + spell_display[i]
+        
+        return board
+        
     
     def __play_spell(self, player: PWrap, spell: SWrap):
         messages = [spell.spell.get_cast_print(player.name)]
@@ -289,6 +339,20 @@ class Battle:
         
         spell.cooldown = spell.spell.cooldown
 
+        return messages
+    
+    def __play_potion(self, player: PWrap, potion: PoWrap):
+        heal = player.display_health() + ' -> '
+        player.health += potion.potion.heal
+        heal += player.display_health()
+        
+        potion.used = True
+        
+        messages = [
+            f'{player.name} drinks a {potion.potion.display_name()}',
+            heal
+        ]
+        
         return messages
     
     def __move(self, player: PWrap, move: int):
@@ -339,6 +403,7 @@ class Battle:
         if spell != None:
             direction = UP
 
+            player.plan.type = ATTACK 
             player.plan.spell = spell
             player.plan.aim = direction
 
@@ -360,20 +425,25 @@ class Battle:
                     'input': 'choice',
                     'choices': ['1', '2', '3', '4', '5']
                 }
-
         elif potion != None:
-            pass
+            player.plan.potion = potion
+            player.plan.type = POTION
+            
         elif start == 'up':
             player.plan.move = UP
+            player.plan.type = MOVEMENT
 
         elif start == 'left':
             player.plan.move = LEFT
+            player.plan.type = MOVEMENT
 
         elif start == 'down':
             player.plan.move = DOWN
+            player.plan.type = MOVEMENT
 
         elif start == 'right':
             player.plan.move = RIGHT
+            player.plan.type = MOVEMENT
         
         return prompt
 
@@ -421,6 +491,18 @@ class Battle:
                 message += f'{BOLD}{BLACK}{spell.spell.name} ({spell.cooldown} Turns){RESET}'
             
             messages.append(message)
+        
+        for potion in player.potions:
+            message = '  '
+            
+            if potion.used:
+                message += f'{BOLD + BLACK}{potion.potion.name} (Used){RESET}'
+            else:
+                choices.append(potion.potion.name.lower())
+                message += f'{potion.potion.display_name()}'
+            
+            messages.append(message)
+        
         
         mess = ''
 

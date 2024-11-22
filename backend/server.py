@@ -255,11 +255,35 @@ def handle_message(player: Player, message: str):
         choice = data['response'][0]
 
         if choice == 'potion':
-            out(ms.CHOICE, f'{player.client.get_name()} obtained a potion')
-            pass
+            potion = items.get_potion()
+            
+            player.potions.append(potion)
+            send(player.client.socket, json.dumps({
+                'messages': [
+                    f'{player.client.get_name()} got a {potion.display_name()}',
+                    '!FREEZE'
+                ]
+            }))
+            
+            out(ms.CHOICE, f'{player.client.get_name()} obtained a {potion.display_name()}')
         elif choice == 'armour':
-            out(ms.CHOICE, f'{player.client.get_name()} obtained armour')
-            pass
+            amt = random.randint(2, 4)
+            
+            visual = player.display_health() + ' -> '
+            
+            player.health += amt
+            
+            visual += player.display_health()
+            
+            send(player.client.socket, json.dumps({
+                'messages': [
+                    f'{player.client.get_name()} got armour',
+                    visual,
+                    '!FREEZE'
+                ]
+            }))
+            
+            out(ms.CHOICE, f'{player.client.get_name()} obtained armour, {visual}')
 
         out(ms.QUEUE, f'{player.client.get_name()} enters the queue')
     elif player.state == BATTLE_PROMPT:
@@ -390,6 +414,11 @@ def check_queue():
         send_battle(battle)
 
 def send_battle(battle: Battle):
+    thread = Thread(target = delay_send_battle, args=(battle, ))
+    thread.start()
+
+def delay_send_battle(battle: Battle):
+    time.sleep(1)
     send(battle.a.player.client.socket, battle.get_message(A))
     send(battle.b.player.client.socket, battle.get_message(B))
 

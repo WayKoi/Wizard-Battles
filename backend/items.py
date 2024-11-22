@@ -42,16 +42,16 @@ class Spell:
         # this organizes the spells into classes
         self.tier = tier
     
-    def display_pattern(self):
+    def display_pattern(self, position = (2, 2), direction = UP):
         build = TYPE_NAMES[self.attack_type] +'\n'
         
-        spots = self.get_spots()
+        spots = self.get_spots(position, direction)
 
         for y in range(5):
             for x in range(5):
                 if (x, y) in spots:
                     build += self.colour + ' ■ ' + RESET
-                elif (x, y) == (2, 2) and self.attack_type <= 1:
+                elif (x, y) == position and self.attack_type <= 1:
                     build += GREEN + ' ☺ ' + RESET
                 else:
                     build += ' • '
@@ -64,7 +64,12 @@ class Spell:
         spots = []
         
         if self.attack_type == RELATIVE or self.attack_type == RELATIVE_SYMMETRIC:
-            pattern = self.pattern
+            pattern = self.pattern.copy()
+            
+            # up    = 0
+            # left  = 1
+            # down  = 2
+            # right = 3
             
             if direction % 2 == 1:
                 # left or right
@@ -102,8 +107,8 @@ class Spell:
     def display_damage(self):
         return RED + ('♥' * self.damage) + RESET
     
-    def display_spell(self):
-        pattern = self.display_pattern().split('\n')
+    def display_spell(self, position = (2, 2), direction = UP):
+        pattern = self.display_pattern(position, direction).split('\n')
         
         pattern[1] += f' {self.display_name()}'
         pattern[2] += f' {BOLD + BLACK}Tier {self.tier}{RESET}'
@@ -312,10 +317,31 @@ def get_spell(name):
     return None
 
 class Potion:
-    pass
+    def __init__(self, name, colour, heal):
+        self.name: str = name
+        self.colour: str = colour
+        
+        self.heal: int = heal
+    
+    def display_name(self):
+        return self.colour + self.name + RESET
 
 
-potions: list[Potion] = []
+potions: list[Potion] = [
+    Potion(
+        'Healing Potion',
+        RED,
+        3
+    ),
+    Potion(
+        'Greater Healing Potion',
+        RED,
+        5
+    )
+]
+
+def get_potion() -> Potion:
+    return random.choice(potions)
 
 if __name__ == '__main__':
     for spell in spells:

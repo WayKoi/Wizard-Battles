@@ -9,7 +9,6 @@ SERVER = socket.gethostbyname(socket.gethostname())
 FORMAT = 'utf-8'
 
 LOCAL_IP = socket.gethostbyname(socket.gethostname())
-ADDR = (SERVER, PORT)
 
 DISCONNECT_MESSAGE = '!DISCONNECT'
 PING_MESSAGE = '!PING'
@@ -25,6 +24,11 @@ class Client:
     def __init__(self):
         self.connected = False
         self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server = SERVER
+        
+        inp = input('Please enter IP : ')
+        if inp != '':
+            self.server = inp
     
     def send(self, message: str):
         if not self.connected:
@@ -95,7 +99,7 @@ class Client:
                 self.receive()
     
     def connect(self):
-        self.client.connect(ADDR)
+        self.client.connect((self.server, PORT))
         self.connected = True
         
         recvWait = Thread(target = self.__recieveLoop, args = ())

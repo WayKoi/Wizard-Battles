@@ -1,6 +1,6 @@
 from constant import VISUALS
 
-from constant import START_STATE
+from constant import START_STATE, RED, RESET
 
 class Client:
     def __init__(self, socket, address) -> None:
@@ -26,3 +26,11 @@ class Player:
         
         self.spells  = []
         self.potions = []
+    
+    def display_health(self):
+        build = RED
+        
+        for i in range(self.health):
+            build += '♥'
+        
+        return build + RESET
