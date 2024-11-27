@@ -46,6 +46,8 @@ class SWrap:
     def __init__(self, spell: Spell) -> None:
         self.spell = spell
         self.cooldown = 0
+        if spell.cooldown > 6:
+            self.cooldown = spell.cooldown - 6
 
 def wrap_spells(spells: list[Spell]):
     wrapped = []
