@@ -20,6 +20,7 @@ py game.py
 
 Now, the client will ask for an IP address.
 Type in the IP that the server is running on and it should connect and ask you to name your wizard.
+*Note: If you are on the same machine as the one running the server, when prompted for an IP address you can simply hit enter*
 
 To stop the server, simply type `stop` and hit enter in the server terminal.
 
