@@ -25,3 +25,7 @@ Type in the IP that the server is running on and it should connect and ask you t
 To stop the server, simply type `stop` and hit enter in the server terminal.
 
 You can also use `cls` or `clear` to clear the server console.
+
+---
+
+### Playing the game
